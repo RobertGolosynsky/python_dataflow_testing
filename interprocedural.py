@@ -1,4 +1,5 @@
-from definition_use_pairs_2 import definition_use_pairs, create_cfg, create_super_cfg, to_line_cfg, to_def_use_graph
+from def_use import definition_use_pairs, to_def_use_graph
+from cfg import create_cfg, create_super_cfg, to_line_cfg
 import networkx as nx
 from networkx.drawing.nx_agraph import write_dot, graphviz_layout
 import matplotlib.pyplot as plt
