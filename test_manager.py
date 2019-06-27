@@ -1,13 +1,14 @@
-import ast
-import sys
 import os
 import subprocess
 import venv
-from pathlib import Path
+
 import astroid
 import urllib.request
+from collections import defaultdict
 
 from file_finder import find_files
+
+from util import listdir_fullpath
 
 dataset_folder = "dataset"
 activate_this_py_url = "https://raw.githubusercontent.com/pypa/virtualenv/master/virtualenv_embedded/activate_this.py"
@@ -25,14 +26,6 @@ maybe if setup is present - setup the project(for now no setup)
 
 
 
-
-def listdir_fullpath(d):
-    return [os.path.join(d, f) for f in os.listdir(d)]
-
-
-
-
-
 class TestClass(object):
     def __init__(self, test_class_node, import_nodes, file_path, code):
         self.test_class_node = test_class_node
@@ -41,12 +34,51 @@ class TestClass(object):
         self.code = code
         self.function_nodes = list(self.extract_function_nodes())
 
+        self.trace = defaultdict(TestClass.constr)
+
+    @staticmethod
+    def constr():
+        return defaultdict(list)
+
     def extract_function_nodes(self):
         for node in self.test_class_node.body:
             yield node
 
     def test_class_name(self):
         return self.test_class_node.name
+
+    def add_trace(self, func, trace):
+        self.trace[func] = trace
+
+    def report_class(self):
+        combined_traces = defaultdict(list)
+
+        for function, trace in self.trace.items():
+            for file_path, line_numbers in trace.items():
+                combined_traces[file_path].extend(line_numbers)
+
+        print("Report for test class {}".format(self.test_class_name()))
+        self._print_report(combined_traces)
+
+    def report_function(self, func):
+        print("Report for function {}.{}".format(self.test_class_name(), func.name))
+
+        self._print_report(self.trace[func])
+
+    @staticmethod
+    def _print_report(traces):
+        for file_path in traces:
+            marked_lines = set(traces[file_path])
+            with open(file_path) as f:
+                lines = f.readlines()
+            for i, _ in enumerate(lines):
+                if i in marked_lines:
+                    lines[i - 1] = ">>>" + lines[i - 1]
+                else:
+                    lines[i - 1] = "---" + lines[i - 1]
+            for line in lines:
+                print(line, end="")
+            print()
 
 
 class TestModule(object):
@@ -58,7 +90,6 @@ class TestModule(object):
         self.import_nodes = self.extract_import_nodes()
         self.test_class_nodes = self.extract_test_class_nodes()
         self.test_classes = self.crete_test_classes()
-
 
     def extract_import_nodes(self):
         import_nodes = []
@@ -148,7 +179,7 @@ class Project(object):
     def __init__(self, project_path):
 
         self.project_path = project_path
-        self.project_name = os.path.dirname(self.project_path)
+        self.project_name = os.path.basename(self.project_path)
         self.tests = []
 
     def __repr__(self):
@@ -194,7 +225,7 @@ class Project(object):
             return
         # subprocess.run(["pipreqs", self.project_path, "--force"])
 
-    def create_vevn(self):
+    def create_venv(self):
         if not self.has_venv():
             env = venv.EnvBuilder(system_site_packages=False,
                                   clear=False,
@@ -241,7 +272,7 @@ def find_projects(root):
 # projects = find_projects("dataset")
 # p = projects[0]
 # p.freeze()
-# p.create_vevn()
+# p.create_venv()
 # p.activate_venv()
 # p.install_dependencies()
 
@@ -257,14 +288,3 @@ def find_projects(root):
 
 
 
-# def trace(f, *args):
-#     def callback(frame, event, arg):
-#         print(frame, event, arg)
-#         print(frame.f_lineno)
-#         code_obj = frame.f_code
-#         print(code_obj.co_filename)
-#         return callback
-#
-#     sys.settrace(callback)
-#     f(*args)
-#     sys.settrace(None)
