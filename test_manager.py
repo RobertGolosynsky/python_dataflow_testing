@@ -45,6 +45,9 @@ class TestClass(object):
         for node in self.test_class_node.body:
             yield node
 
+    def test_class_name(self):
+        return self.test_class_node.name
+
 
 class TestModule(object):
 
@@ -235,22 +238,22 @@ def find_projects(root):
     return [Project(project_path) for project_path in listdir_fullpath(root)]
 
 
-projects = find_projects("dataset")
-p = projects[0]
+# projects = find_projects("dataset")
+# p = projects[0]
 # p.freeze()
 # p.create_vevn()
 # p.activate_venv()
 # p.install_dependencies()
 
 
-test_manager = TestManager(p)
-test_modules = test_manager.find_test_modules()
-for m in test_modules:
-    print(m.file_path)
-
-    for test_cls in m.test_classes:
-        for function in test_cls.function_nodes:
-            print(dir(function))
+# test_manager = TestManager(p)
+# test_modules = test_manager.find_test_modules()
+# for m in test_modules:
+#     print(m.file_path)
+#
+#     for test_cls in m.test_classes:
+#         for function in test_cls.function_nodes:
+#             print(dir(function))
 
 
 
