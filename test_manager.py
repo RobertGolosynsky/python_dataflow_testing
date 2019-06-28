@@ -1,4 +1,5 @@
 import os
+import sys
 import subprocess
 import venv
 
@@ -9,6 +10,7 @@ from collections import defaultdict
 from file_finder import find_files
 
 from util import listdir_fullpath
+import astroid_util
 
 dataset_folder = "dataset"
 activate_this_py_url = "https://raw.githubusercontent.com/pypa/virtualenv/master/virtualenv_embedded/activate_this.py"
@@ -87,33 +89,11 @@ class TestModule(object):
         self.file_path = file_path
         self.code = code
         self.ast = ast
-        self.import_nodes = self.extract_import_nodes()
-        self.test_class_nodes = self.extract_test_class_nodes()
-        self.test_classes = self.crete_test_classes()
+        self.import_nodes = astroid_util.imports_of(self.ast)
+        self.test_class_nodes = astroid_util.classes_with_base_class(self.ast, "TestCase")
+        self.test_classes = self.create_test_classes()
 
-    def extract_import_nodes(self):
-        import_nodes = []
-        for node in self.ast.body:
-            if isinstance(node, astroid.ImportFrom) \
-                    or isinstance(node, astroid.Import):
-                import_nodes.append(node)
-        return import_nodes
-
-    def extract_test_class_nodes(self):
-        test_class_nodes = []
-        for node in self.ast.body:
-            if isinstance(node, astroid.ClassDef):
-                for base_class in node.bases:
-                    if isinstance(base_class, astroid.Attribute):
-                        base_class_name = base_class.attrname
-                    else:
-                        base_class_name = base_class.name
-                    if base_class_name and base_class_name == "TestCase":
-                        test_class_nodes.append(node)
-        return test_class_nodes
-
-
-    def crete_test_classes(self):
+    def create_test_classes(self):
         test_classes = []
         for test_class_node in self.test_class_nodes:
             test_classes.append(TestClass(test_class_node, self.import_nodes, self.file_path, self.code))
@@ -141,18 +121,8 @@ class TestManager(object):
                 if module_text:
                     # print(module_text)
                     module_node = astroid.parse(module_text)
-                    for class_ in module_node.body:
-                        if isinstance(class_, astroid.ClassDef):
-                            for base_class in class_.bases:
-                                if isinstance(base_class, astroid.Attribute):
-                                    base_class_name = base_class.attrname
-                                # elif isinstance(baseclass, astroid.Name):
-                                #     base_class_name = baseclass.name
-                                else:
-                                    base_class_name = base_class.name
-                                if base_class_name:
-                                    if base_class_name == "TestCase":
-                                        modules.append(TestModule(f, module_text, module_node))
+                    if len(astroid_util.classes_with_base_class(module_node, "TestCase"))>0:
+                        modules.append(TestModule(f, module_text, module_node))
                                         # ladies and gentleman, we got him
             #     node = ast.parse(file.read())
             #
