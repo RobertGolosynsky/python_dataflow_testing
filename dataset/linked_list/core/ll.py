@@ -1,10 +1,11 @@
-class Node():		
+class Node(object):
 
 	def __init__(self, el=None, next=None):
 		self.el = el
 		self.next = next
 
-class LinkedList():
+
+class LinkedList(object):
 
 	def __init__(self, seq=[]):
 		self.root = None
@@ -76,6 +77,15 @@ class LinkedList():
 			node = node.next
 		return l
 
+
+def print_list(l: LinkedList, every_x_el):
+	res = []
+	for i in range(l.len()):
+		if i % every_x_el == 0:
+			res = l.get(i)
+	while len(res) < 10:
+		res.append(0)
+	return res
 
 # ll = LinkedList()
 # ll.append(1)

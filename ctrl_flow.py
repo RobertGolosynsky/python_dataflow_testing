@@ -26,7 +26,7 @@ def ins_for_node(g, node):
 	return g.nodes[node][instruction_key] if instruction_key in g.nodes[node] else None
 
 
-def create_cfg(func):
+def create_cfg(func, name=None):
 	bb_mgr = basic_blocks(PYTHON_VERSION, IS_PYPY, func)
 
 	cfg = ControlFlowGraph(bb_mgr)
@@ -82,7 +82,7 @@ def create_cfg(func):
 	entry = next(iter(sorted(G.in_degree, key=lambda x: x[1])))[0]
 	exit = next(iter(sorted(G.out_degree, key=lambda x: x[1])))[0]
 	
-	G.name = func.__name__
+	G.name = func.__name__ if not name else name
 
 	G.add_edge("Entry {}".format(G.name), entry)
 

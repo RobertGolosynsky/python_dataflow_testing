@@ -43,8 +43,8 @@ class TestClass(object):
         return defaultdict(list)
 
     def extract_function_nodes(self):
-        for node in self.test_class_node.body:
-            yield node
+        return [node for node in self.test_class_node.body]
+
 
     def test_class_name(self):
         return self.test_class_node.name
@@ -99,10 +99,6 @@ class TestModule(object):
             test_classes.append(TestClass(test_class_node, self.import_nodes, self.file_path, self.code))
         return test_classes
 
-    def explore(self):
-        print(self.ast)
-
-
 
 class TestManager(object):
 
@@ -112,7 +108,6 @@ class TestManager(object):
         self.project = project
         self.tests = self.find_test_modules()
 
-
     def find_test_modules(self):
         modules = []
         for f in find_files(self.project.project_path, ".py", self.exclude_folders):
@@ -121,23 +116,10 @@ class TestManager(object):
                 if module_text:
                     # print(module_text)
                     module_node = astroid.parse(module_text)
-                    if len(astroid_util.classes_with_base_class(module_node, "TestCase"))>0:
+                    test_classes = astroid_util.classes_with_base_class(module_node, "TestCase")
+                    if len(test_classes) > 0:
                         modules.append(TestModule(f, module_text, module_node))
-                                        # ladies and gentleman, we got him
-            #     node = ast.parse(file.read())
-            #
-            # classes = [n for n in node.body if isinstance(n, ast.ClassDef)]
-            # classes = [n for n in node.body if isinstance(n, ast.ClassDef)]
-            #
-            # for class_ in classes:
-            #
-            #     # super = class_.bases[0].value.id
-            #     print("bases: ", [type(b) for b in class_.bases])
-            #
-            #     methods = [n for n in class_.body if isinstance(n, ast.FunctionDef)]
-            #     for methodNode in methods:
-            #         method_name = methodNode.name
-            #         args = methodNode.args.args
+# ladies and gentleman, we got him
         return modules
 
 

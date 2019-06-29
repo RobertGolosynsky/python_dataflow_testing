@@ -3,7 +3,7 @@ import astroid
 
 def parse(module_code):
     module_ast = astroid.parse(module_code)
-    return functions_of(module_ast), classes_of(module_ast), imports_of(module_ast)
+    return functions_of(module_ast), classes_of(module_ast)
 
 
 def base_class_names(class_):
@@ -15,9 +15,7 @@ def base_class_names(class_):
 
 
 def classes_with_base_class(module, base_class):
-    for class_ in classes_of(module):
-        if base_class in base_class_names(class_):
-            yield class_
+    return [class_ for class_ in classes_of(module) if base_class in base_class_names(class_)]
 
 
 def _filter_type(l, t):
@@ -28,9 +26,15 @@ def classes_of(module):
     return _filter_type(module.body, astroid.ClassDef)
 
 
-def functions_of(module):
-    return _filter_type(module.body, astroid.FunctionDef)
+def functions_of(module_or_class):
+    return _filter_type(module_or_class.body, astroid.FunctionDef)
 
 
 def imports_of(module):
     return _filter_type(module.body, astroid.Import) + _filter_type(module.body, astroid.ImportFrom)
+
+
+def function_name(function_node):
+    function_parent = function_node.parent
+    parent_name = str(function_parent.name)
+    return parent_name+"."+function_node.name

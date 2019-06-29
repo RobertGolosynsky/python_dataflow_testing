@@ -1,5 +1,5 @@
 from def_use import definition_use_pairs, to_def_use_graph
-from cfg import create_cfg, create_super_cfg, to_line_cfg
+from ctrl_flow import create_cfg, create_super_cfg, to_line_cfg
 import networkx as nx
 from networkx.drawing.nx_agraph import write_dot, graphviz_layout
 import matplotlib.pyplot as plt
@@ -44,7 +44,6 @@ g = to_def_use_graph(g)
 g = to_line_cfg(g)
 
 to_remove = [ (v,u,k,d) for v,u,k,d in g.edges(keys=True, data="varname") if d is not None]
-print(to_remove)
 g.remove_edges_from(to_remove)
 
 pos = graphviz_layout(g, prog='dot')

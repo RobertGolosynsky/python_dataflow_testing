@@ -1,5 +1,5 @@
 from collections import defaultdict
-from cfg import instruction_key, line_key, label_delimiter
+from ctrl_flow import instruction_key, line_key, label_delimiter
 import networkx as nx
 
 
@@ -39,7 +39,7 @@ def get_use(g, node):
 			return "self."+instr.argval
 
 
-def has_attr_def(g,node):
+def has_attr_def(g, node):
 	if instruction_key in g.nodes[node]:
 		instr = g.nodes[node][instruction_key]
 		if instr.opname == "STORE_ATTR":
