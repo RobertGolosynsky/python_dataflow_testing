@@ -45,7 +45,6 @@ class TestClass(object):
     def extract_function_nodes(self):
         return [node for node in self.test_class_node.body]
 
-
     def test_class_name(self):
         return self.test_class_node.name
 
@@ -53,14 +52,18 @@ class TestClass(object):
         self.trace[func] = trace
 
     def report_class(self):
-        combined_traces = defaultdict(list)
-
-        for function, trace in self.trace.items():
-            for file_path, line_numbers in trace.items():
-                combined_traces[file_path].extend(line_numbers)
-
+    #     combined_traces = defaultdict(list)
+    #
+    #     for function, trace in self.trace.items():
+    #         for line, file_path, frame_self in trace.items():
+    #             combined_traces[file_path].extend(line_numbers)
+    #
         print("Report for test class {}".format(self.test_class_name()))
-        self._print_report(combined_traces)
+        joined_traces = []
+        for func, trace in self.trace.items():
+            joined_traces.extend(trace)
+        self._print_report(joined_traces)
+    #     self._print_report(combined_traces)
 
     def report_function(self, func):
         print("Report for function {}.{}".format(self.test_class_name(), func.name))
@@ -69,9 +72,13 @@ class TestClass(object):
 
     @staticmethod
     def _print_report(traces):
-        for file_path in traces:
-            marked_lines = set(traces[file_path])
-            with open(file_path) as f:
+        lines_by_file = defaultdict(list)
+        for line, file, frame_self in traces:
+            lines_by_file[file].append(line)
+
+        for file, lines in lines_by_file.items():
+            marked_lines = set(lines)
+            with open(file) as f:
                 lines = f.readlines()
             for i, _ in enumerate(lines):
                 if i in marked_lines:

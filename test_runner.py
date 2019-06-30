@@ -1,91 +1,41 @@
-
+import importlib.util
 import sys
 from pathlib import Path
-import os
-from collections import defaultdict
+
+from persistance import save_test_manager
+from test_manager import find_projects, TestManager
+from tracer import Tracer
+
+project = find_projects("dataset")[0]
+test_manager = TestManager(project)
+test_modules = test_manager.find_test_modules()
+
+a_module = test_modules[0]
+module_path = a_module.file_path
+sys.path.insert(0, project.project_path)
+
+spec = importlib.util.spec_from_file_location("test_module", module_path)
+test_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(test_module)
+
+test_class = a_module.test_classes[0]
+test_class_name = test_class.test_class_name()
+
+print(test_class_name)
+print(dir(test_module))
+test_case_constructor = getattr(test_module, test_class_name)
+
+test_case = test_case_constructor()
+
+tracer = Tracer([Path(project.project_path)], [Path(test_class.file_path)])
+for function in test_class.function_nodes:
+    func_name = function.name
+    test_function = getattr(test_case, func_name)
+    traced_path = tracer.trace(test_function)
+    test_class.add_trace(function, traced_path)
 
 
-class Tracer(object):
+# test_class.report_class()
 
-    def __init__(self, keep, exclude):
-        self.keep_dirs = [f for f in keep if os.path.isdir(f)]
-        self.keep_files = [f for f in keep if os.path.isfile(f)]
-
-        self.exclude_dirs = [f for f in exclude if os.path.isdir(f)]
-        self.exclude_files = [f for f in exclude if os.path.isfile(f)]
-
-        self.log = defaultdict(list)
-
-    def should_keep(self, file):
-        if file in self.keep_files:
-            return True
-        for keep_dir in self.keep_dirs:
-            if keep_dir in file.parents:
-                return True
-        return False
-
-    def should_exclude(self, file):
-        if file in self.exclude_files:
-            return True
-        for exclude_dir in self.exclude_dirs:
-            if exclude_dir in file.parents:
-                return True
-        return False
-
-    def trace(self, function_to_trace):
-        self.log = defaultdict(list)
-        sys.settrace(self.tracefunc)
-        function_to_trace()
-        sys.settrace(None)
-        return self.log
-
-    def tracefunc(self, frame, event, arg):
-        # if event == "line":
-        # indent[0] += 2
-
-        code = frame.f_code
-        line = frame.f_lineno
-        fname = code.co_filename
-        # print(fname, line)
-        file_path = Path(fname)
-
-        if self.should_keep(file_path) and not self.should_exclude(file_path):
-            # if Path(parent) in file_path.parents and exclude not in file_path.parents:
-            self.log[file_path].append(line)
-        else:
-            return None
-        # elif event == "return":
-        #     print("<" + "-" * indent[0], "exit function", frame.f_code.co_name)
-        #     indent[0] -= 2
-        return self.tracefunc
-
-
-
-
-# def tracefunc(frame, event, arg, indent=[0]):
-#     if event == "line":
-#         indent[0] += 2
-#         code = frame.f_code
-#         line = frame.f_lineno
-#         fname = code.co_filename
-#
-#     elif event == "return":
-#         print("<" + "-" * indent[0], "exit function", frame.f_code.co_name)
-#         indent[0] -= 2
-#     return tracefunc
-
-
-#
-# def tracefunc(frame, event, arg, indent=[0]):
-#     if event == "call":
-#         indent[0] += 2
-#         code = frame.f_code
-#         print("-" * indent[0] + "> call function", frame.f_code.co_name, code.co_filename)
-#     elif event == "return":
-#         print("<" + "-" * indent[0], "exit function", frame.f_code.co_name)
-#         indent[0] -= 2
-#     return tracefunc
-
-
-
-
+print(test_manager.project.project_name)
+save_test_manager(test_manager)
