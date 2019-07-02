@@ -1,9 +1,11 @@
+from collections import namedtuple
+
 import def_use
 import reflection
 import ctrl_flow
 import new_def_use
 import networkx as nx
-
+import inspect
 from draw import draw
 
 
@@ -19,10 +21,42 @@ class ClassCFG(object):
                 continue
             # name = class_name + "." + fn_name
             method_obj = getattr(cls_object, fn_name)
+
+
             byte_code_cfg = ctrl_flow.create_cfg(method_obj, class_name + "." + fn_name)
             line_cfg = ctrl_flow.to_line_cfg(byte_code_cfg)
+            # pizdec
+            entry = next(iter(sorted(line_cfg.in_degree, key=lambda x: x[1])))[0]
+            succ = next(line_cfg.successors(entry))
+            line_cfg.remove_edge(entry, succ)
+            _, start_line = inspect.getsourcelines(method_obj)
+            arg_spec = inspect.getfullargspec(method_obj)
+            args = arg_spec.args
+            args.append(arg_spec.varargs)
+            args.append(arg_spec.varkw)
+
+            # new_def_use.instructions_key
+            instructions = []
+            fake_instr_constr = namedtuple("Fake", ["offset", "opname", "argval"])
+            for i, arg in enumerate(args):
+                if arg and not arg == "self":
+                    fake_instruction = fake_instr_constr(i, "STORE_FAST", arg)
+                    instructions.append(fake_instruction)
+
+            line_cfg.add_node(str(start_line), **{new_def_use.instructions_key: instructions})
+            line_cfg.add_edge(entry, str(start_line))
+            line_cfg.add_edge(str(start_line), succ)
+
             nx.set_node_attributes(line_cfg, class_name + "." + fn_name, ctrl_flow.scope_key)
             self.trees[fn_name] = new_def_use.LineTree(line_cfg)
+
+            for node, data in line_cfg.nodes(data=True):
+                print(node, data)
+                print(self.defs_at(str(start_line)))
+
+            for x,y in line_cfg.edges():
+                print(x, "-->", y)
+
 
     def _tree_for_line(self, line_num):
         for method_name in self.trees:

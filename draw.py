@@ -11,7 +11,7 @@ def draw(g, extra_edges=None, extra_edges_labels=None):
 
 
     pos = graphviz_layout(g, prog='dot')
-    labels = {l: str(l[-4:]) for l in g.nodes}
+    labels = {l: str(l) for l in g.nodes}
     nx.draw(g, pos, node_size=150, node_color="#ccddff", node_shape="s", labels=labels)
     # nx.draw_networkx_edges(g, pos, node_size=150, node_color="#ccddff", node_shape="s", labels=labels)
     if extra_edges:

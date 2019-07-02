@@ -173,6 +173,10 @@ class LineTree(BaseDefUseTree):
             instructions_graph.add_edge(i1.offset, i2.offset)
             instructions_graph.nodes[i1.offset][instruction_key] = i1
             instructions_graph.nodes[i2.offset][instruction_key] = i2
+        if len(instructions_graph.nodes()) == 0: # there was only one node or there were no nodes
+            for instruction in instructions:
+                instructions_graph.add_node(instruction.offset, **{instruction_key: instruction})
+
         # print(instructions_graph.nodes(data=True))
         return instructions_graph
 
