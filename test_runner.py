@@ -8,9 +8,8 @@ from tracer import Tracer
 
 project = find_projects("dataset")[0]
 test_manager = TestManager(project)
-test_modules = test_manager.find_test_modules()
 
-a_module = test_modules[0]
+a_module = test_manager.tests[0]
 module_path = a_module.file_path
 sys.path.insert(0, project.project_path)
 
@@ -22,7 +21,6 @@ test_class = a_module.test_classes[0]
 test_class_name = test_class.test_class_name()
 
 print(test_class_name)
-print(dir(test_module))
 test_case_constructor = getattr(test_module, test_class_name)
 
 test_case = test_case_constructor()
@@ -36,6 +34,9 @@ for function in test_class.function_nodes:
 
 
 # test_class.report_class()
+# print(test_manager.project.project_name)
+# for fn in test_class.function_nodes:
+#     for line, file, self_ in test_class.trace[fn]:
+#         print(line, file, self_)
 
-print(test_manager.project.project_name)
 save_test_manager(test_manager)

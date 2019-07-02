@@ -34,9 +34,10 @@ class TestClass(object):
         self.import_nodes = import_nodes
         self.file_path = file_path
         self.code = code
-        self.function_nodes = list(self.extract_function_nodes())
+        self.function_nodes = self.extract_function_nodes()
 
-        self.trace = defaultdict(TestClass.constr)
+        self.trace = defaultdict(list)
+        # self.trace_by_file = defaultdict(self.constr)
 
     @staticmethod
     def constr():
@@ -52,18 +53,11 @@ class TestClass(object):
         self.trace[func] = trace
 
     def report_class(self):
-    #     combined_traces = defaultdict(list)
-    #
-    #     for function, trace in self.trace.items():
-    #         for line, file_path, frame_self in trace.items():
-    #             combined_traces[file_path].extend(line_numbers)
-    #
         print("Report for test class {}".format(self.test_class_name()))
         joined_traces = []
         for func, trace in self.trace.items():
             joined_traces.extend(trace)
         self._print_report(joined_traces)
-    #     self._print_report(combined_traces)
 
     def report_function(self, func):
         print("Report for function {}.{}".format(self.test_class_name(), func.name))

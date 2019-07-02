@@ -13,7 +13,7 @@ class LinkedList(object):
 			self.append(el)
 	
 	def _last_node(self):
-		if self.root == None:
+		if not self.root:
 			return None
 		else:
 			node = self.root
@@ -22,6 +22,7 @@ class LinkedList(object):
 					return node
 				else:
 					node = node.next
+
 	def _get_node(self, i):
 		node = self.root
 		for j in range(i):
@@ -32,7 +33,7 @@ class LinkedList(object):
 
 	def append(self, el):
 		new_node = Node(el=el, next=None)
-		if self.root == None:
+		if not self.root:
 			self.root = new_node
 		else:
 			self._last_node().next = new_node
@@ -87,12 +88,3 @@ def print_list(l: LinkedList, every_x_el):
 		res.append(0)
 	return res
 
-# ll = LinkedList()
-# ll.append(1)
-# ll.append(2)
-# ll.append(3)
-# ll.remove(1)
-# l = ll.as_list()
-# print(l)
-# print(ll.len())
-# print("value",1,ll.get(1))

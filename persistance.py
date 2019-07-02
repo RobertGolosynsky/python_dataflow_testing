@@ -19,7 +19,7 @@ def save_test_manager(mngr: TestManager):
     pickle.dump(mngr, open(managers_folder/manager_file_name(mngr), "wb"))
 
 
-def load_test_managers():
+def load_test_managers() -> [TestManager]:
     managers = []
     for file in listdir_fullpath(managers_folder):
         mngr = pickle.load(open(file, "rb"))

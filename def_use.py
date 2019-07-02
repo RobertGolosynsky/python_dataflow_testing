@@ -21,13 +21,28 @@ def has_use(g, node):
 	return False
 
 
+def resolve_target(g, node):
+	pred = next(g.predecessors(node))
+	pred_instr = g.nodes[pred][instruction_key]
+
+	if pred_instr.opname == "LOAD_FAST":
+		return pred_instr.argval
+	elif pred_instr.opname == "LOAD_ATTR":
+		t = resolve_target(g, pred)+"."+pred_instr.argval
+		return t
+	else:
+		return None
+
+
 def get_def(g, node):
 	if instruction_key in g.nodes[node]:
 		instr = g.nodes[node][instruction_key]
 		if instr.opname == "STORE_FAST":
 			return instr.argval
 		if instr.opname == "STORE_ATTR":
-			return "self."+instr.argval
+			target = resolve_target(g, node)
+			if target:
+				return target+"."+instr.argval
 
 
 def get_use(g, node):
@@ -36,7 +51,9 @@ def get_use(g, node):
 		if instr.opname == "LOAD_FAST":
 			return instr.argval
 		if instr.opname == "LOAD_ATTR":
-			return "self."+instr.argval
+			target = resolve_target(g, node)
+			if target:
+				return target+"."+instr.argval
 
 
 def has_attr_def(g, node):
@@ -119,3 +136,9 @@ def to_def_use_graph(g):
 		varname = get_def(h, fr)
 		h.add_edge(fr, to, def_use = True, key = "def_use", varname=varname)
 	return h
+
+
+def pairs_to_line(g, pairs):
+	return [(g.nodes[fr][line_key], g.nodes[to][line_key], get_use(g, to)) for fr, to in pairs]
+
+
