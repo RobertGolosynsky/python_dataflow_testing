@@ -1,4 +1,4 @@
-import graphs
+import graphs.create
 
 
 class FunctionCFG:
@@ -11,10 +11,9 @@ class FunctionCFG:
         #
         #   }
 
-        self.g = ctrl_flow.create_cfg(func)
+        self.g = graphs.create.create_cfg(func)
         self.local_definition_use_pairs = []
         pass
-
 
 
 class MethodCFG:

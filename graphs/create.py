@@ -19,25 +19,14 @@ scope_key = "scope"
 FakeBytecodeInstruction = namedtuple("FakeBytecodeInstruction", ["offset", "opname", "argval", "starts_line"])
 
 
-def _line_for_node(g, node):
-    return g.nodes[node][line_key] if line_key in g.nodes[node] else None
-
-
-def _ins_for_node(g, node):
-    return g.nodes[node][instruction_key] if instruction_key in g.nodes[node] else None
-
-
-def _instructions_for_node(g, node):
-    return g.nodes[node][instructions_key] if instructions_key in g.nodes[node] else None
-
-
 def create_cfg(func):
     offset_wise_cfg = _create_byte_offset_cfg(func)
     if not offset_wise_cfg:
         return None
 
     line_wise_cfg = _as_line_wise_cfg(offset_wise_cfg)
-
+    file_path = inspect.getfile(func)
+    nx.set_node_attributes(line_wise_cfg, file_path, name="file")
     return line_wise_cfg
 
 
@@ -51,7 +40,8 @@ def _as_line_wise_cfg(g):
 
     for line_num in lines:
         args = {
-            instructions_key: _instructions_as_graph(lines[line_num])
+            instructions_key: _instructions_as_graph(lines[line_num]),
+            line_key: line_num
         }
         h.add_node(line_num, **args)
 
@@ -203,3 +193,16 @@ def _add_entry_and_exit_nodes(g, entry_label, exit_label):
 
     g.add_edge(exit_node, exit_label)
     return g
+
+
+def _line_for_node(g, node):
+    return g.nodes[node][line_key] if line_key in g.nodes[node] else None
+
+
+def _ins_for_node(g, node):
+    return g.nodes[node][instruction_key] if instruction_key in g.nodes[node] else None
+
+
+def _instructions_for_node(g, node):
+    return g.nodes[node][instructions_key] if instructions_key in g.nodes[node] else None
+

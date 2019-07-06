@@ -20,12 +20,13 @@ def is_isomorphic_with_data(g1, g2):
     return nx.is_isomorphic(g1, g2, node_match=node_match)
 
 
-def check_against_saved(to_map, map_function, check, names, prefix):
+def check_against_saved(to_map, map_function, check, names, prefix, save = False):
     os.makedirs(prefix, exist_ok=True)
     for item, name in list(zip(to_map, names)):
-        # with open(os.path.join(prefix, name), "wb") as f:
-        #     processed = map_function(item)
-        #     pickle.dump(processed, f)
+        if save:
+            with open(os.path.join(prefix, name), "wb") as f:
+                processed = map_function(item)
+                pickle.dump(processed, f)
 
         with open(os.path.join(prefix, name), "rb") as f:
             expected_obj = pickle.load(f)
@@ -75,6 +76,8 @@ class TestGraphsCreate(unittest.TestCase):
             for key in n1:
                 attr1 = n1[key]
                 attr2 = n2[key]
+
+                print(key, attr1, attr2)
                 if type(attr1) == nx.DiGraph:
                     if not is_isomorphic_with_data(attr1, attr2):
 
@@ -89,6 +92,7 @@ class TestGraphsCreate(unittest.TestCase):
         cutoff = 10
 
         def checker(true_, actual):
+            print(actual.nodes(data=True))
             # draw_line_cfg(true_)
             if true_:
                 self.assertTrue(nx.is_isomorphic(true_, actual, node_match=node_match))
