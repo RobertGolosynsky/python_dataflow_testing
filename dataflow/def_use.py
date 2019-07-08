@@ -1,8 +1,18 @@
 import networkx as nx
-from graphs.create import instructions_key, instruction_key
+
+from draw import draw
+from graphs.create import instructions_key, instruction_key, try_create_cfg, FILE_KEY
+from graphs.draw import dump
 
 DEFINITIONS_KEY = "definitions"
 USES_KEY = "uses"
+
+
+def try_create_cfg_with_definitions_and_uses(func):
+    line_cfg = try_create_cfg(func)
+    if line_cfg:
+        return add_definitions_and_uses(line_cfg)
+    return None
 
 
 def add_definitions_and_uses(line_cfg):
@@ -26,8 +36,12 @@ def _resolve_target(g, node):
     if pred_instr.opname == "LOAD_FAST":
         return pred_instr.argval
     elif pred_instr.opname == "LOAD_ATTR":
-        t = _resolve_target(g, pred) + "." + pred_instr.argval
-        return t
+        pred_target = _resolve_target(g, pred)
+        if pred_target:
+            t = _resolve_target(g, pred) + "." + pred_instr.argval
+            return t
+        else:
+            return None
     else:
         return None
 

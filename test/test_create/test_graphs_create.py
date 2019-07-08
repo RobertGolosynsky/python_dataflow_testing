@@ -1,11 +1,11 @@
 import os
-import types
 import unittest
 import pickle
 import networkx as nx
 import inspect
-from graphs.create import _create_byte_offset_cfg, create_cfg
-from graphs.draw import draw_line_cfg, draw_byte_cfg
+from graphs.create import _try_create_byte_offset_cfg, try_create_cfg
+import dataflow.def_use as du
+from util import reflection
 
 
 def is_isomorphic_with_data(g1, g2):
@@ -59,7 +59,7 @@ class TestGraphsCreate(unittest.TestCase):
 
         def mapper(func):
 
-            return _create_byte_offset_cfg(func)
+            return _try_create_byte_offset_cfg(func)
 
         check_against_saved(
             functions[:cutoff],
@@ -98,7 +98,7 @@ class TestGraphsCreate(unittest.TestCase):
                 self.assertTrue(nx.is_isomorphic(true_, actual, node_match=node_match))
 
         def mapper(func):
-            return create_cfg(func)
+            return try_create_cfg(func)
 
         check_against_saved(
             functions[:cutoff],
@@ -107,3 +107,9 @@ class TestGraphsCreate(unittest.TestCase):
             names[:cutoff],
             "true_line_cfgs"
         )
+
+    def test_install_finalize_options_function(self):
+        module = reflection.try_load_module("/usr/lib/python3.6/distutils/command/install.py")
+        cls = getattr(module, "install")
+        func = getattr(cls, "finalize_options")
+        cfg = du.try_create_cfg_with_definitions_and_uses(func)

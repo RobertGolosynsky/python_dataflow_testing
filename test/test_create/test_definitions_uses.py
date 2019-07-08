@@ -1,11 +1,9 @@
-import inspect
 import unittest
 import networkx as nx
 
-from graphs.draw import dump
-from test.test_graphs_create import is_isomorphic_with_data, functions_to_dis, check_against_saved
-from graphs.create import create_cfg
-from dataflow.def_use import add_definitions_and_uses, DEFINITIONS_KEY, USES_KEY
+from test.test_create.test_graphs_create import is_isomorphic_with_data, functions_to_dis, check_against_saved
+from graphs.create import try_create_cfg
+from dataflow.def_use import add_definitions_and_uses
 
 
 class TestDefinitionUsePairs(unittest.TestCase):
@@ -37,7 +35,7 @@ class TestDefinitionUsePairs(unittest.TestCase):
 
         def mapper(func):
 
-            g = add_definitions_and_uses(create_cfg(func))
+            g = add_definitions_and_uses(try_create_cfg(func))
             # lines, start = inspect.getsourcelines(func)
             # dump(g, start, lines, attr_keys=[DEFINITIONS_KEY, USES_KEY])
 

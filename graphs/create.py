@@ -1,4 +1,5 @@
 import inspect
+import os
 
 from xdis.std import get_instructions, Instruction
 from xdis import PYTHON_VERSION, IS_PYPY
@@ -10,23 +11,28 @@ import networkx as nx
 
 from collections import defaultdict, namedtuple
 
+
+
 label_delimiter = "-"
 line_key = "line"
 instruction_key = "ins"
 instructions_key = "instrs"
 scope_key = "scope"
+FILE_KEY = "file"
+# from graphs.draw import draw_line_cfg, draw_byte_cfg
 
 FakeBytecodeInstruction = namedtuple("FakeBytecodeInstruction", ["offset", "opname", "argval", "starts_line"])
 
 
-def create_cfg(func):
-    offset_wise_cfg = _create_byte_offset_cfg(func)
+def try_create_cfg(func):
+    offset_wise_cfg = _try_create_byte_offset_cfg(func)
     if not offset_wise_cfg:
         return None
-
+    # lines, st = inspect.getsourcelines(func)
+    # draw_byte_cfg(nx.relabel_nodes(offset_wise_cfg, mapping={node: node+"@"+str(data[line_key])+" "+data[instruction_key].opname for node, data in offset_wise_cfg.nodes(data=True)}))
     line_wise_cfg = _as_line_wise_cfg(offset_wise_cfg)
     file_path = inspect.getfile(func)
-    nx.set_node_attributes(line_wise_cfg, file_path, name="file")
+    nx.set_node_attributes(line_wise_cfg, file_path, name=FILE_KEY)
     return line_wise_cfg
 
 
@@ -48,7 +54,8 @@ def _as_line_wise_cfg(g):
     for fr, to in g.edges():
         line_from = _line_for_node(g, fr)
         line_to = _line_for_node(g, to)
-        h.add_edge(line_from, line_to)
+        if not line_from == line_to:
+            h.add_edge(line_from, line_to)
     h = _add_entry_and_exit_nodes(h, "Entry", "Exit")
     nx.relabel_nodes(h, mapping={l: str(l) for l in h.nodes()}, copy=False)
     return h
@@ -65,19 +72,22 @@ def _get_instructions(func):
     return instrs
 
 
-def _create_byte_offset_cfg(func):
+def _try_create_byte_offset_cfg(func):
     try:
         bb_mgr = basic_blocks(PYTHON_VERSION, IS_PYPY, func)
+        cfg = ControlFlowGraph(bb_mgr)
     except:
         return None
-    cfg = ControlFlowGraph(bb_mgr)
+
     byte_blocks_graph = cfg.graph
 
     g = nx.MultiDiGraph()
 
     instructions = list(_get_instructions(func))
 
-    fake_instructions = _fake_instructions_function_arguments(func)
+    fake_instructions = _try_fake_instructions_function_arguments(func)
+    if not fake_instructions:
+        return None
     instructions.extend(fake_instructions)
 
     offset_to_instruction = {}
@@ -119,6 +129,8 @@ def _create_byte_offset_cfg(func):
                 and \
                 BB_JUMP_UNCONDITIONAL in edge.source.flags:
             continue
+        if edge.kind == 'no fallthrough':
+            continue
         source = edge.source
         dest = edge.dest
         source_offset = source.bb.index[1]
@@ -141,8 +153,11 @@ def _create_byte_offset_cfg(func):
     return g
 
 
-def _fake_instructions_function_arguments(func):
-    _, function_definition_line = inspect.getsourcelines(func)
+def _try_fake_instructions_function_arguments(func):
+    try:
+        _, function_definition_line = inspect.getsourcelines(func)
+    except:
+        return None
     arg_spec = inspect.getfullargspec(func)
 
     args = arg_spec.args
@@ -176,7 +191,7 @@ def _instructions_as_graph(instructions):
     g = nx.DiGraph()
     for ins in instructions:
         g.add_node(ins.offset, **{instruction_key:ins})
-
+    instructions = list(sorted(instructions, key=lambda i: i.offset))
     for ins1, ins2 in zip(instructions, instructions[1:]):
         g.add_edge(ins1.offset, ins2.offset)
     nx.relabel_nodes(g, mapping={l: str(l) for l in g.nodes()}, copy=False)
@@ -185,13 +200,20 @@ def _instructions_as_graph(instructions):
 
 def _add_entry_and_exit_nodes(g, entry_label, exit_label):
     entry_node = next(iter(sorted(g.in_degree, key=lambda x: x[1])))[0]
-    exit_node = next(iter(sorted(g.out_degree, key=lambda x: x[1])))[0]
+    # print(list(sorted(g.out_degree, key=lambda x: x[1])))
+    # print(g.edges)
+    # draw_line_cfg(g)
+    exit_nodes = [node for node, out_degree in sorted(g.out_degree, key=lambda x: x[1]) if out_degree == 0]
+    # assert len(exit_nodes) == 1
+    for exit_node in exit_nodes:
+        g.add_edge(exit_node, exit_label)
 
     g.add_edge(entry_label, entry_node)
 
     # nx.relabel_nodes(g, {exit_node: exit_label}, copy=False)
+    # for pred in g.predecessors(exit_label):
+    #     print("Before exit:", pred)
 
-    g.add_edge(exit_node, exit_label)
     return g
 
 
