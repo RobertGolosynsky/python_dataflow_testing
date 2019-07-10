@@ -14,3 +14,7 @@ class FunctionCFG:
         self.cfg = du.try_create_cfg_with_definitions_and_uses(function_object)
         pass
 
+    def find_def_use_pairs(self):
+        # TODO: implement method
+        pass
+

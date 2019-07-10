@@ -1,5 +1,4 @@
 import inspect
-import os
 
 from xdis.std import get_instructions, Instruction
 from xdis import PYTHON_VERSION, IS_PYPY
@@ -12,14 +11,10 @@ import networkx as nx
 from collections import defaultdict, namedtuple
 
 
-
-label_delimiter = "-"
-line_key = "line"
-instruction_key = "ins"
-instructions_key = "instrs"
-scope_key = "scope"
+LINE_KEY = "line"
+INSTRUCTION_KEY = "ins"
+INSTRUCTIONS_KEY = "instrs"
 FILE_KEY = "file"
-# from graphs.draw import draw_line_cfg, draw_byte_cfg
 
 FakeBytecodeInstruction = namedtuple("FakeBytecodeInstruction", ["offset", "opname", "argval", "starts_line"])
 
@@ -28,8 +23,6 @@ def try_create_cfg(func):
     offset_wise_cfg = _try_create_byte_offset_cfg(func)
     if not offset_wise_cfg:
         return None
-    # lines, st = inspect.getsourcelines(func)
-    # draw_byte_cfg(nx.relabel_nodes(offset_wise_cfg, mapping={node: node+"@"+str(data[line_key])+" "+data[instruction_key].opname for node, data in offset_wise_cfg.nodes(data=True)}))
     line_wise_cfg = _as_line_wise_cfg(offset_wise_cfg)
     file_path = inspect.getfile(func)
     nx.set_node_attributes(line_wise_cfg, file_path, name=FILE_KEY)
@@ -46,8 +39,8 @@ def _as_line_wise_cfg(g):
 
     for line_num in lines:
         args = {
-            instructions_key: _instructions_as_graph(lines[line_num]),
-            line_key: line_num
+            INSTRUCTIONS_KEY: _instructions_as_graph(lines[line_num]),
+            LINE_KEY: line_num
         }
         h.add_node(line_num, **args)
 
@@ -109,8 +102,8 @@ def _try_create_byte_offset_cfg(func):
 
     for instr in instructions:
         attrs = {
-            line_key: offset_to_line[instr.offset],
-            instruction_key: instr
+            LINE_KEY: offset_to_line[instr.offset],
+            INSTRUCTION_KEY: instr
         }
         g.add_node(instr.offset, **attrs)
 
@@ -190,7 +183,7 @@ def _try_fake_instructions_function_arguments(func):
 def _instructions_as_graph(instructions):
     g = nx.DiGraph()
     for ins in instructions:
-        g.add_node(ins.offset, **{instruction_key:ins})
+        g.add_node(ins.offset, **{INSTRUCTION_KEY:ins})
     instructions = list(sorted(instructions, key=lambda i: i.offset))
     for ins1, ins2 in zip(instructions, instructions[1:]):
         g.add_edge(ins1.offset, ins2.offset)
@@ -200,31 +193,23 @@ def _instructions_as_graph(instructions):
 
 def _add_entry_and_exit_nodes(g, entry_label, exit_label):
     entry_node = next(iter(sorted(g.in_degree, key=lambda x: x[1])))[0]
-    # print(list(sorted(g.out_degree, key=lambda x: x[1])))
-    # print(g.edges)
-    # draw_line_cfg(g)
     exit_nodes = [node for node, out_degree in sorted(g.out_degree, key=lambda x: x[1]) if out_degree == 0]
-    # assert len(exit_nodes) == 1
     for exit_node in exit_nodes:
         g.add_edge(exit_node, exit_label)
 
     g.add_edge(entry_label, entry_node)
 
-    # nx.relabel_nodes(g, {exit_node: exit_label}, copy=False)
-    # for pred in g.predecessors(exit_label):
-    #     print("Before exit:", pred)
-
     return g
 
 
 def _line_for_node(g, node):
-    return g.nodes[node][line_key] if line_key in g.nodes[node] else None
+    return g.nodes[node][LINE_KEY] if LINE_KEY in g.nodes[node] else None
 
 
 def _ins_for_node(g, node):
-    return g.nodes[node][instruction_key] if instruction_key in g.nodes[node] else None
+    return g.nodes[node][INSTRUCTION_KEY] if INSTRUCTION_KEY in g.nodes[node] else None
 
 
 def _instructions_for_node(g, node):
-    return g.nodes[node][instructions_key] if instructions_key in g.nodes[node] else None
+    return g.nodes[node][INSTRUCTIONS_KEY] if INSTRUCTIONS_KEY in g.nodes[node] else None
 

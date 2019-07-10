@@ -77,7 +77,6 @@ class TestGraphsCreate(unittest.TestCase):
                 attr1 = n1[key]
                 attr2 = n2[key]
 
-                print(key, attr1, attr2)
                 if type(attr1) == nx.DiGraph:
                     if not is_isomorphic_with_data(attr1, attr2):
 
@@ -92,8 +91,6 @@ class TestGraphsCreate(unittest.TestCase):
         cutoff = 10
 
         def checker(true_, actual):
-            print(actual.nodes(data=True))
-            # draw_line_cfg(true_)
             if true_:
                 self.assertTrue(nx.is_isomorphic(true_, actual, node_match=node_match))
 
