@@ -7,7 +7,7 @@ import graphs.create as cr
 from collections import namedtuple
 
 Var = namedtuple("VariableDefinition", ["file", "line", "varname"])
-Pair = namedtuple("DefinitionUsePair", ["def_file", "def_line", "use_file", "use_line", "varname"])
+Pair = namedtuple("DefinitionUsePair", ["definition", "use"])
 
 
 def definition_use_pairs(cfg: nx.DiGraph):
@@ -25,19 +25,17 @@ def definition_use_pairs(cfg: nx.DiGraph):
                 for use_varname in uses:
                     if use_varname == reaching_var.varname:
                         pair = Pair(
-                            reaching_var.file,
-                            reaching_var.line,
-                            use_file,
-                            use_line,
-                            reaching_var.varname
+                            reaching_var,
+                            Var(use_file, use_line, use_varname)
                         )
                         pairs.append(pair)
     return pairs
 
 
-def _reaching_definitions(cfg: nx.DiGraph):
-
+def _reaching_definitions(cfg: nx.DiGraph, initial_set=None):
     reach_out = defaultdict(set)
+    if initial_set:
+        reach_out.update(initial_set)
     working_list = set(cfg.nodes())
     while len(working_list) > 0:
         a_node = working_list.pop()
@@ -56,7 +54,8 @@ def _reaching_definitions(cfg: nx.DiGraph):
                 for defined_variable_name in node_definitions:
                     if not reaching_var.varname == defined_variable_name:
                         node_reach_out.add(reaching_var)
-            node_deffined_variables = [Var(node_file, node_line, var_name)
+            if not initial_set:
+                node_deffined_variables = [Var(node_file, node_line, var_name)
                                        for var_name in node_definitions]
             node_reach_out.update(node_deffined_variables)
         else:

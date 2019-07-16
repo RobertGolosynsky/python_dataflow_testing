@@ -15,7 +15,7 @@ def try_load_module(module_path, under_name=None):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
     except:
-        # raise
+        raise
         raise NotImplementedError("There was a problem loading module")
 
     return module
@@ -45,3 +45,7 @@ def method_type(cls, method):
     else:  # Not present in parent : newly defined
         return DEFINED
 
+
+def get_class_function(module, class_name, function_name):
+    cls_obj = getattr(module, class_name)
+    return getattr(cls_obj, function_name)

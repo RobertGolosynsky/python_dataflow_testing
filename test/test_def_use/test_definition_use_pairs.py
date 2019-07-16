@@ -69,7 +69,7 @@ class TestDefinitionUsePairs(unittest.TestCase):
 
         def determine(el):
             for pair in pairs:
-                if pair.def_line == el[0] and pair.use_line == el[1]:
+                if pair.definition.line == el[0] and pair.use.line == el[1]:
                     return True
             return False
 

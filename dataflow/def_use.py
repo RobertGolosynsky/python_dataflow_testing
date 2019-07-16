@@ -25,7 +25,6 @@ def _add_definitions_and_uses(line_cfg):
         defs_and_uses[line_node][USES_KEY] = uses
 
     nx.set_node_attributes(line_cfg, defs_and_uses)
-
     return line_cfg
 
 
