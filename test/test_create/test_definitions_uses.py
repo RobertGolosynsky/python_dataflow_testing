@@ -2,8 +2,9 @@ import unittest
 import networkx as nx
 
 from test.test_create.test_graphs_create import is_isomorphic_with_data, functions_to_dis, check_against_saved
-from graphs.create import try_create_cfg
 from dataflow.def_use import try_create_cfg_with_definitions_and_uses
+from util import reflection
+import dataflow.def_use as du
 
 
 class TestDefinitionUsePairs(unittest.TestCase):
@@ -29,9 +30,9 @@ class TestDefinitionUsePairs(unittest.TestCase):
         functions, names = functions_to_dis(module)
         cutoff = 10
 
-        def checker(true_, actual):
-            if true_:
-                self.assertTrue(nx.is_isomorphic(true_, actual, node_match=node_match))
+        def checker(expected, actual):
+            if expected:
+                self.assertTrue(nx.is_isomorphic(expected, actual, node_match=node_match))
 
         def mapper(func):
 
@@ -46,6 +47,13 @@ class TestDefinitionUsePairs(unittest.TestCase):
             mapper,
             checker,
             names[:cutoff],
-            "true_line_cfgs_with_def_use",
+            "expected_def_use",
             save=True
         )
+
+    def test_install_finalize_options_function(self):
+        module = reflection.try_load_module("/usr/lib/python3.6/distutils/command/install.py")
+        cls = getattr(module, "install")
+        func = getattr(cls, "finalize_options")
+        cfg = du.try_create_cfg_with_definitions_and_uses(func)
+        self.assertIsNotNone(cfg)

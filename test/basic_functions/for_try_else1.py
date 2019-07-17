@@ -5,17 +5,21 @@
 
 def testing(self,a,b):
 
-    begin = -1
+    # begin = -1
 
     try:
         in_try = 1
-    except :
-        raise
+    except IOError:
+        raise_ = -0
+        # raise
+        # in_except = 2
         # in_exception = 2
-    finally:
-        in_finally_ = 3
+    # else:
+    #     in_else = "else"
+    # finally:
+    #     in_finally_ = 3
 
-    return 4
+    # return 4
 
 
 import sys

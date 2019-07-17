@@ -3,8 +3,8 @@ import unittest
 import pickle
 import networkx as nx
 import inspect
-from graphs.create import _try_create_byte_offset_cfg, try_create_cfg
-import graphs.draw as gd
+from graphs.create import _try_create_byte_offset_cfg
+
 import dataflow.def_use as du
 from util import reflection
 
@@ -27,13 +27,11 @@ def check_against_saved(to_map, map_function, check, names, prefix, save = False
         if save:
             with open(os.path.join(prefix, name), "wb") as f:
                 processed = map_function(item)
+
                 pickle.dump(processed, f)
 
         with open(os.path.join(prefix, name), "rb") as f:
             expected_obj = pickle.load(f)
-            lines, st = inspect.getsourcelines(item)
-            for i, l in enumerate(lines):
-                print(i+st,l,end="")
             check(expected_obj, map_function(item))
 
 
@@ -70,34 +68,7 @@ class TestGraphsCreate(unittest.TestCase):
             mapper,
             checker,
             names[:cutoff],
-            "true_byte_code_cfgs"
+            "expected_cfgs",
+            save=True
         )
 
-    def test_create_line_cfg(self):
-
-        module = nx
-        functions, names = functions_to_dis(module)
-        cutoff = 10
-
-        def checker(true_, actual):
-            gd.draw_line_cfg(true_)
-            # gd.draw_line_cfg(actual)
-            # if true_:
-            #     self.assertTrue(nx.is_isomorphic(true_, actual, node_match=node_match))
-
-        def mapper(func):
-            return try_create_cfg(func)
-
-        check_against_saved(
-            functions[3:4],
-            mapper,
-            checker,
-            names[3:4],
-            "true_line_cfgs"
-        )
-
-    def test_install_finalize_options_function(self):
-        module = reflection.try_load_module("/usr/lib/python3.6/distutils/command/install.py")
-        cls = getattr(module, "install")
-        func = getattr(cls, "finalize_options")
-        cfg = du.try_create_cfg_with_definitions_and_uses(func)

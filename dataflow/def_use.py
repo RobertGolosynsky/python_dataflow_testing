@@ -1,31 +1,28 @@
 import networkx as nx
 
-from draw import draw
-from graphs.create import INSTRUCTIONS_KEY, INSTRUCTION_KEY, try_create_cfg, FILE_KEY
-from graphs.draw import dump
+from graphs.create import INSTRUCTION_KEY, try_create_cfg, FILE_KEY
 
-DEFINITIONS_KEY = "definitions"
-USES_KEY = "uses"
+
+DEFINITION_KEY = "definition"
+USE_KEY = "use"
 
 
 def try_create_cfg_with_definitions_and_uses(func):
-    line_cfg = try_create_cfg(func)
-    if line_cfg:
-        return _add_definitions_and_uses(line_cfg)
+    cfg = try_create_cfg(func)
+    if cfg:
+        return _add_definitions_and_uses(cfg)
     return None
 
 
-def _add_definitions_and_uses(line_cfg):
+def _add_definitions_and_uses(cfg):
     defs_and_uses = {}
-    for line_node in line_cfg.nodes():
-        deffs = list(_find_definitions_at_line(line_cfg, line_node))
-        uses = list(_find_uses_at_line(line_cfg, line_node))
-        defs_and_uses[line_node] = {}
-        defs_and_uses[line_node][DEFINITIONS_KEY] = deffs
-        defs_and_uses[line_node][USES_KEY] = uses
+    for node in cfg.nodes():
+        defs_and_uses[node] = {}
+        defs_and_uses[node][DEFINITION_KEY] = _get_def(cfg, node)
+        defs_and_uses[node][USE_KEY] = _get_use(cfg, node)
 
-    nx.set_node_attributes(line_cfg, defs_and_uses)
-    return line_cfg
+    nx.set_node_attributes(cfg, defs_and_uses)
+    return cfg
 
 
 def _resolve_target(g, node):
@@ -66,32 +63,3 @@ def _get_use(g, node):
             if target:
                 return target + "." + instr.argval
 
-
-def _find_definitions_at_line(line_cfg, node):
-    node_attrs = line_cfg.nodes[node]
-    var_names = []
-    if INSTRUCTIONS_KEY not in node_attrs:
-        return var_names
-
-    instructions_cfg_at_line = node_attrs[INSTRUCTIONS_KEY]
-    for byte_node in instructions_cfg_at_line.nodes:
-        var_name = _get_def(instructions_cfg_at_line, byte_node)
-        if var_name:
-            var_names.append(var_name)
-
-    return var_names
-
-
-def _find_uses_at_line(line_cfg, node):
-    node_attrs = line_cfg.nodes[node]
-    var_names = []
-    if INSTRUCTIONS_KEY not in node_attrs:
-        return var_names
-
-    instructions_cfg_at_line = node_attrs[INSTRUCTIONS_KEY]
-    for byte_node in instructions_cfg_at_line.nodes:
-        var_name = _get_use(instructions_cfg_at_line, byte_node)
-        if var_name:
-            var_names.append(var_name)
-
-    return var_names

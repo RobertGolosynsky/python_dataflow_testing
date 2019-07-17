@@ -128,3 +128,4 @@ dmypy.json
 .project
 managers
 python-control-flow
+*.png

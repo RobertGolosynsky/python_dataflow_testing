@@ -10,59 +10,58 @@ Var = namedtuple("VariableDefinition", ["file", "line", "varname"])
 Pair = namedtuple("DefinitionUsePair", ["definition", "use"])
 
 
-def definition_use_pairs(cfg: nx.DiGraph):
+def definition_use_pairs(cfg: nx.DiGraph, initial_set=None):
     pairs = []
-    reaching_deffs = _reaching_definitions(cfg)
+    reaching_deffs = _reaching_definitions(cfg, initial_set=initial_set)
     for node in cfg.nodes():
         node_attrs = cfg.nodes[node]
-        uses = node_attrs.get(du.USES_KEY, [])
+        use = node_attrs.get(du.USE_KEY, None)
         use_file = node_attrs.get(cr.FILE_KEY, "UNDEFINED")
         use_line = node_attrs.get(cr.LINE_KEY, -1)
 
-        if len(uses) > 0:
+        if use:
             reach_in = reaching_deffs[node]
             for reaching_var in reach_in:
-                for use_varname in uses:
-                    if use_varname == reaching_var.varname:
-                        pair = Pair(
-                            reaching_var,
-                            Var(use_file, use_line, use_varname)
-                        )
-                        pairs.append(pair)
+                if use == reaching_var.varname:
+                    pair = Pair(
+                        reaching_var,
+                        Var(use_file, use_line, use)
+                    )
+                    pairs.append(pair)
     return pairs
 
 
 def _reaching_definitions(cfg: nx.DiGraph, initial_set=None):
     reach_out = defaultdict(set)
-    if initial_set:
-        reach_out.update(initial_set)
     working_list = set(cfg.nodes())
     while len(working_list) > 0:
         a_node = working_list.pop()
+        # print(a_node)
         old_val = reach_out[a_node]
+        # print("before ", old_val)
         node_reach_in = set()
+        if initial_set:
+            node_reach_in = initial_set.get(a_node, set())
         for a_pred in cfg.predecessors(a_node):
             node_reach_in.update(reach_out[a_pred])
 
         node_reach_out = set()
         node_attrs: dict = cfg.nodes[a_node]
-        node_definitions = node_attrs.get(du.DEFINITIONS_KEY, [])
+        node_definition = node_attrs.get(du.DEFINITION_KEY, None)
         node_file = node_attrs.get(du.FILE_KEY, "UNDEFINED")
         node_line = node_attrs.get(cr.LINE_KEY, -1)
-        if len(node_definitions) > 0:
+        if node_definition:
             for reaching_var in node_reach_in:
-                for defined_variable_name in node_definitions:
-                    if not reaching_var.varname == defined_variable_name:
-                        node_reach_out.add(reaching_var)
+                if not reaching_var.varname == node_definition:
+                    node_reach_out.add(reaching_var)
             if not initial_set:
-                node_deffined_variables = [Var(node_file, node_line, var_name)
-                                       for var_name in node_definitions]
-            node_reach_out.update(node_deffined_variables)
+                defined_var = Var(node_file, node_line, node_definition)
+                node_reach_out.add(defined_var)
         else:
             node_reach_out = node_reach_in
 
         reach_out[a_node] = node_reach_out
-
+        # print("after ", node_reach_out)
         if not node_reach_out == old_val:
             working_list.update(cfg.successors(a_node))
 

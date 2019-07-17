@@ -9,13 +9,11 @@ from control_flow.graph import BB_JUMP_UNCONDITIONAL, FLAG2NAME, \
 
 import networkx as nx
 
-from collections import defaultdict, namedtuple
+from collections import namedtuple
 import graphs.util as gu
-import graphs.draw as gd
 
 LINE_KEY = "line"
 INSTRUCTION_KEY = "ins"
-INSTRUCTIONS_KEY = "instrs"
 FILE_KEY = "file"
 
 FakeBytecodeInstruction = namedtuple("FakeBytecodeInstruction", ["offset", "opname", "argval", "starts_line"])
@@ -25,50 +23,11 @@ exit_node_offset = 1
 
 def try_create_cfg(func):
     offset_wise_cfg = _try_create_byte_offset_cfg(func)
-    # gd.draw_byte_cfg(offset_wise_cfg)
     if not offset_wise_cfg:
         return None
-    line_wise_cfg = _as_line_wise_cfg(offset_wise_cfg)
     file_path = inspect.getfile(func)
-    nx.set_node_attributes(line_wise_cfg, file_path, name=FILE_KEY)
-    return line_wise_cfg
-
-
-def _as_line_wise_cfg(g):
-    exit_label = "Exit"
-    entry_label = "Entry"
-    h = nx.DiGraph()
-    lines = defaultdict(list)
-    for node in g.nodes():
-        instr = _ins_for_node(g, node)
-        if instr:
-            line = _line_for_node(g, node)
-            if line:
-                lines[line].append(instr)
-
-    for line_num in lines:
-        args = {
-            INSTRUCTIONS_KEY: _instructions_as_graph(lines[line_num]),
-            LINE_KEY: line_num
-        }
-        h.add_node(line_num, **args)
-    h.add_node(exit_label)
-    for fr, to, data in g.edges(data=True):
-
-        line_from = _line_for_node(g, fr)
-        if to == str(exit_node_offset):
-            h.add_edge(line_from, exit_label, label="EXIT")
-            print("edge_type:", line_from, exit_label, data)
-        else:
-            line_to = _line_for_node(g, to)
-            if not line_from == line_to:  # do not add line loops
-                h.add_edge(line_from, line_to,
-                           label=data.get("label", "UNDEF"),
-                           color=data.get("color", "black"))
-                print("edge_type:", line_from, line_to, data)
-    h = _add_entry_and_exit_nodes(h, entry_label, exit_label)
-    nx.relabel_nodes(h, mapping={l: str(l) for l in h.nodes()}, copy=False)
-    return h
+    nx.set_node_attributes(offset_wise_cfg, file_path, name=FILE_KEY)
+    return offset_wise_cfg
 
 
 def _get_instructions(func):
@@ -91,13 +50,12 @@ def _try_create_byte_offset_cfg(func):
         return None
 
     byte_blocks_graph = cfg.graph
-    print("byte block graph edges:", byte_blocks_graph.edges)
     g = nx.MultiDiGraph()
 
     instructions = list(_get_instructions(func))
 
     fake_instructions = _try_fake_instructions_function_arguments(func)
-    if not fake_instructions:
+    if fake_instructions is None:
         return None
     instructions.extend(fake_instructions)
 
@@ -146,8 +104,8 @@ def _try_create_byte_offset_cfg(func):
         #         and \
         #         BB_NOFOLLOW in edge.dest.flags:
         #     remove = True
-        # if edge.kind == 'no fallthrough':
-        #     remove = True
+        if edge.kind == 'no fallthrough':
+            remove = True
         # if edge.kind == 'fallthrough':
         #     remove = True
         # if BB_FINALLY in edge.source.flags and BB_END_FINALLY in edge.dest.flags:
@@ -160,6 +118,9 @@ def _try_create_byte_offset_cfg(func):
         if edge.kind == "forward" and BB_END_FINALLY in edge.dest.flags:
             remove = True
 
+        if remove:
+            continue
+
         def fl2name(fls):
             return ", ".join([FLAG2NAME[f] for f in fls])
 
@@ -167,13 +128,13 @@ def _try_create_byte_offset_cfg(func):
         dest = edge.dest
         source_offset = source.bb.index[1]
         dest_offset = dest.bb.index[0]
-        print("%i -> %i" % (source_offset, dest_offset),
-              "| kind: " + edge.kind +
-              " | source flags: " +
-              str(fl2name(edge.source.flags)) +
-              " | dest flags: " +
-              str(fl2name(edge.dest.flags))
-              )
+        # print("%i -> %i" % (source_offset, dest_offset),
+        #       "| kind: " + edge.kind +
+        #       " | source flags: " +
+        #       str(fl2name(edge.source.flags)) +
+        #       " | dest flags: " +
+        #       str(fl2name(edge.dest.flags))
+        #       )
         if not dest_offset % 2 == 0:  # maybe don't add an extra node for exit?
             g.add_edge(source_offset, exit_node_offset,
                        label=edge.kind + " / " + str(fl2name(edge.source.flags)) + " / " + str(
@@ -183,12 +144,18 @@ def _try_create_byte_offset_cfg(func):
                        color="red" if remove else "black"
                        )
         else:
+            # colors = ['#35332C', '#E1DAC2', '#D1B04B', '#3C2E00', '#C19200', '#242C24', '#A1B99F', '#48AB3D', '#053200',
+            #           '#0F9E00', '#352D2C', '#E1C6C2', '#D15A4B', '#3C0700', '#C11600', '#201F25', #'#8B8B9D', '#454292',
+            #           '#02002A', '#0C0787']
+            colors = ["red", "yellow", "blue", "orange", "purple", "brown"]
             g.add_edge(source_offset, dest_offset,
                        label=edge.kind + " / " + str(fl2name(edge.source.flags)) + " / " + str(
                            fl2name(edge.dest.flags)),
                        source_flags=fl2name(edge.source.flags),
                        dest_flags=fl2name(edge.dest.flags),
-                       color="red" if remove else "black"
+                       # color="red" if remove else "black"
+                       color=colors[hash(edge.kind) % len(colors)],
+                       weight=10000
                        )
 
     if len(fake_instructions) > 0:
@@ -239,17 +206,6 @@ def _try_fake_instructions_function_arguments(func):
     return instructions
 
 
-def _instructions_as_graph(instructions):
-    g = nx.DiGraph()
-    for ins in instructions:
-        g.add_node(ins.offset, **{INSTRUCTION_KEY: ins})
-    instructions = list(sorted(instructions, key=lambda i: i.offset))
-    for ins1, ins2 in zip(instructions, instructions[1:]):
-        g.add_edge(ins1.offset, ins2.offset)
-    nx.relabel_nodes(g, mapping={l: str(l) for l in g.nodes()}, copy=False)
-    return g
-
-
 def _add_entry_and_exit_nodes(g, entry_label, exit_label):
     # exit already added, but not for try blocks and other hanging code
     entry_nodes = gu.nodes_with_in_degree(g, 0)
@@ -275,7 +231,3 @@ def _line_for_node(g, node):
 
 def _ins_for_node(g, node):
     return g.nodes[node][INSTRUCTION_KEY] if INSTRUCTION_KEY in g.nodes[node] else None
-
-
-def _instructions_for_node(g, node):
-    return g.nodes[node][INSTRUCTIONS_KEY] if INSTRUCTIONS_KEY in g.nodes[node] else None

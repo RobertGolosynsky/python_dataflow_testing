@@ -19,23 +19,14 @@ def draw_byte_cfg(g):
     plt.show()
 
 
-def draw_line_cfg(g):
-    pos = graphviz_layout(g, prog='dot')
-    nx.draw_networkx(g, pos, node_size=150, node_color="#ccddff", node_shape="s")
-    plt.show()
-
-
 def draw_with_code(g, pairs, func, control_edge_color="black", flow_edge_color="green", file=None):
 
     cfg = g.copy() # nx.MultiDiGraph()
     # cfg.add_nodes_from(g)
     # cfg.add_edges_from(g.edges)
-    print(cfg.nodes(data=True))
-    print(cfg.edges(data=True))
 
     for e in cfg.edges:
         edge_data = cfg.edges[e]
-        print(e, edge_data)
         if "color" not in edge_data:
             edge_data["color"] = control_edge_color
         # cfg.edges[e]["color"] = control_edge_color
@@ -45,11 +36,8 @@ def draw_with_code(g, pairs, func, control_edge_color="black", flow_edge_color="
     code = [line[:-1] for line in code]
 
     for i, p in enumerate(pairs):
-        print(p)
         def_node, data = gu.node_where(cfg, gc.LINE_KEY, p.definition.line)
         use_node, data = gu.node_where(cfg, gc.LINE_KEY, p.use.line)
-        print(def_node)
-        print(use_node)
         cfg.add_edge(use_node, def_node, label=p.use.varname, color=flow_edge_color)
 
     mapping = {}
@@ -70,13 +58,6 @@ def draw_with_code(g, pairs, func, control_edge_color="black", flow_edge_color="
             if instrs_range:
                 new_label+=" @ "+instrs_range
             mapping[node] = new_label
-            print(new_label)
-
-    for e in cfg.edges(data=True):
-        print("aaaa"*4,e)
-
-    print(cfg.nodes(data=True))
-    print(cfg.edges(data=True))
 
     cfg = nx.relabel_nodes(cfg, mapping)
     dot = nx.nx_agraph.to_agraph(cfg)
@@ -95,26 +76,19 @@ def draw_byte_cfg_dot(g, pairs, func,
 
     cfg = g.copy()
 
-    print(cfg.nodes(data=True))
-    print(cfg.edges(data=True))
 
     for e in cfg.edges:
         edge_data = cfg.edges[e]
-        print(e, edge_data)
         if "color" not in edge_data:
             edge_data["color"] = control_edge_color
-        # cfg.edges[e]["color"] = control_edge_color
-        # cfg.edges[e]["label"] = ""
 
     code, start_line = inspect.getsourcelines(func)
     code = [line[:-1] for line in code]
 
     for i, p in enumerate(pairs):
-        print(p)
         def_node, data = gu.node_where(cfg, gc.LINE_KEY, p.definition.line)
         use_node, data = gu.node_where(cfg, gc.LINE_KEY, p.use.line)
-        print(def_node)
-        print(use_node)
+
         cfg.add_edge(use_node, def_node, label=p.use.varname, color=flow_edge_color)
 
     mapping = {}
@@ -132,13 +106,6 @@ def draw_byte_cfg_dot(g, pairs, func,
             code_line = code_line.strip().replace("\\", "\\\\")
             new_label = "%i: %s %s @ %i: %s" % (inst.offset, inst.opname, str(inst.argval), line, code_line)
             mapping[node] = new_label
-            print(new_label)
-
-    for e in cfg.edges(data=True):
-        print("aaaa"*4,e)
-
-    print(cfg.nodes(data=True))
-    print(cfg.edges(data=True))
 
     cfg = nx.relabel_nodes(cfg, mapping)
     dot = nx.nx_agraph.to_agraph(cfg)
@@ -150,7 +117,7 @@ def draw_byte_cfg_dot(g, pairs, func,
         subprocess.run(["xdg-open", temp_file])
 
 
-def draw_block_cfg(func):
+def draw_block_cfg(func, img_file=None):
     from xdis import PYTHON_VERSION, IS_PYPY
     from control_flow.bb import basic_blocks
     from control_flow.cfg import ControlFlowGraph
@@ -161,15 +128,20 @@ def draw_block_cfg(func):
 
     bb_mgr = basic_blocks(PYTHON_VERSION, IS_PYPY, func)
 
-    dis.dis(func)
+    # dis.dis(func)
     cfg = ControlFlowGraph(bb_mgr)
     dot_path = '/tmp/flow-%s.dot' % name
-    png_path = '/tmp/flow-%s.png' % name
-    open(dot_path, 'w').write(cfg.graph.to_dot(False))
-    print("%s written" % dot_path)
+    if not img_file:
+        png_path = '/tmp/flow-%s.png' % name
+    else:
+        png_path = img_file
+    with open(dot_path, 'w') as f:
+        f.write(cfg.graph.to_dot(False))
+    # print("%s written" % dot_path)
 
     os.system("dot -Tpng %s > %s" % (dot_path, png_path))
-    subprocess.run(["xdg-open", png_path])
+    if not img_file:
+        subprocess.run(["xdg-open", png_path])
 
 
 def dump(line_cfg, source_start, source_lines, attr_keys=None):
