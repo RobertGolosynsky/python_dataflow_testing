@@ -1,20 +1,19 @@
 import dataflow.def_use as du
+import dataflow.reaching_definitions as rd
 
 
 class FunctionCFG:
-    def __init__(self, function_object):
-        # create a networkx line wise control flow graph
-        # node attributes: {
-        #   instructions : nx.DiGraph - instructions on the line
-        #   line number : int - line number of the line
-        #   file path : pathlib.Path - file containing the function
-        #
-        #   }
+    def __init__(self, cfg, pairs):
+        self.cfg = cfg
+        self.pairs = pairs
 
-        self.cfg = du.try_create_cfg_with_definitions_and_uses(function_object)
-        pass
+    @classmethod
+    def create(cls, method_object):
+        cfg = du.try_create_cfg_with_definitions_and_uses(method_object)
+        if not cfg:
+            print("Could not create cfg for", method_object)
+            return None
 
-    def find_def_use_pairs(self):
-        # TODO: implement method
-        pass
-
+        pairs = rd.definition_use_pairs(cfg)
+        m = FunctionCFG(cfg, pairs)
+        return m

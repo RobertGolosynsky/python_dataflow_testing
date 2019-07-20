@@ -1,5 +1,7 @@
 from model.cfg.method_cfg import MethodCFG
 from util import reflection
+import dataflow.inter_class as ic
+from itertools import product
 
 
 class ClassCFG(object):
@@ -12,21 +14,57 @@ class ClassCFG(object):
 
         for defined_method in reflection.class_functions(cls_object, m_type=reflection.DEFINED):
             method_obj = getattr(cls_object, defined_method)
-            self.defined_methods[defined_method] = MethodCFG(method_obj, reflection.DEFINED)
+            m = MethodCFG.create(method_obj, reflection.DEFINED)
+            if m:
+                self.defined_methods[defined_method] = m
 
         self.overridden_methods = {}
 
         for overridden_method in reflection.class_functions(cls_object, m_type=reflection.OVERRIDDEN):
             method_obj = getattr(cls_object, overridden_method)
-            self.defined_methods[overridden_method] = MethodCFG(method_obj, reflection.OVERRIDDEN)
+            m = MethodCFG.create(method_obj, reflection.OVERRIDDEN)
+            if m:
+                self.overridden_methods[overridden_method] = m
 
         self.inherited_methods = {}
 
         for inherited_method in reflection.class_functions(cls_object, m_type=reflection.INHERITED):
-            if not inherited_method.startswith("__"):
-                method_obj = getattr(cls_object, inherited_method)
-                self.defined_methods[inherited_method] = MethodCFG(method_obj, reflection.INHERITED)
+            method_obj = getattr(cls_object, inherited_method)
+            m = MethodCFG.create(method_obj, reflection.INHERITED)
+            if m:
+                self.inherited_methods[inherited_method] = m
 
+        self.interclass_pairs = []
+        self.interclass_pairs_inherited = []
+
+        self._calculate_interclass()
+        self._calculate_inherited_interclass()
+
+    def local_methods(self):
+        methods = {**self.defined_methods, **self.overridden_methods}
+        return methods
+
+    def _calculate_interclass(self):
+        local = self.local_methods()
+        without_init = {n: o for n, o in self.local_methods().items() if not n == "__init__"}
+        self.interclass_pairs = []
+
+        for (n1, m1), (n2, m2) in product(local.items(), without_init.items()):
+            pairs = ic.inter_class_def_use_pairs(m1.cfg, m2.cfg)
+            self.interclass_pairs.extend(pairs)
+
+    def _calculate_inherited_interclass(self):
+        local = self.local_methods()
+        inherited = self.inherited_methods
+        self.interclass_pairs = []
+
+        for (n1, m1), (n1, m2) in product(local.items(), inherited.items()):
+            pairs = ic.inter_class_def_use_pairs(m1.cfg, m2.cfg)
+            self.interclass_pairs.extend(pairs)
+
+        for (n1, m1), (n1, m2) in product(inherited.items(), local.items()):
+            pairs = ic.inter_class_def_use_pairs(m1.cfg, m2.cfg)
+            self.interclass_pairs.extend(pairs)
 
     #
     #

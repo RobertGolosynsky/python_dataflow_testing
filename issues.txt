@@ -1,1 +1,2 @@
-1. STORE_SUBSCR : def "reach_out" not found if some_dict["some_key"] = some_value
+1. STORE_SUBSCR : definition "some_dict" not found if some_dict["some_key"] = some_value
+2. try except - can create cfg when return from try block
