@@ -9,8 +9,9 @@ from collections import defaultdict
 
 from file_finder import find_files
 
-from util import listdir_fullpath
+
 import astroid_util
+
 
 dataset_folder = "dataset"
 activate_this_py_url = "https://raw.githubusercontent.com/pypa/virtualenv/master/virtualenv_embedded/activate_this.py"
@@ -241,3 +242,5 @@ def find_projects(root):
 
 
 
+def listdir_fullpath(d):
+    return [os.path.join(d, f) for f in os.listdir(d)]

@@ -1,1 +1,0 @@
-some_external_var = 42

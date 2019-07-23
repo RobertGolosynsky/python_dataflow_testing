@@ -27,37 +27,44 @@ standard_modules = [
 
 
 def try_load_module(module_path, under_name=None):
+    print("Loading module {}".format(module_path))
     if not under_name:
-        under_name = os.path.basename(module_path)
+        # under_name = os.path.basename(module_path)
+        under_name = "some_random_name"
     try:
 
+        # print("Modules loaded ", len(sys.modules.keys()))
         mods = sys.modules.copy()
         to_remove = set(sys.modules.keys())
         to_remove = to_remove.difference(standard_modules)
-
+        #
         for module_name in to_remove:
             del sys.modules[module_name]
-
+        print("Modules loaded ", len(sys.modules.keys()))
+        sys.modules.clear()
         spec = importlib.util.spec_from_file_location(under_name, module_path)
         module = importlib.util.module_from_spec(spec)
         # print("loader", type(spec.loader), spec.loader)
 
         spec.loader.exec_module(module)
-
+        sys.modules.clear()
+        # print("Modules loaded ", len(sys.modules.keys()))
         for module_name in mods:
             sys.modules[module_name] = mods[module_name]
+        # print("Modules loaded ", len(sys.modules.keys()))
 
-
-    except:
+    except Exception as e:
+        print(e)
         raise
-        raise NotImplementedError("There was a problem loading module")
+
+        raise NotImplementedError("There was a problem loading module {}".format(module_path))
 
     return module
 
 
 def module_functions(module):
-    return [f_name for f_name, f_descriptor in inspect.getmembers(module, inspect.isfunction)
-            if inspect.getmodule(f_name) == module]
+    return [m[0] for m in inspect.getmembers(module, inspect.isfunction)
+            if m[1].__module__ == module.__name__]
 
 
 def module_classes(module):

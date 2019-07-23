@@ -1,8 +1,8 @@
 import os
 import pickle
 from pathlib import Path
-from test_manager import TestManager
-from util import listdir_fullpath
+from my_manager import TestManager
+
 
 
 manager_file_ext = "mgr"
@@ -26,4 +26,7 @@ def load_test_managers() -> [TestManager]:
         managers.append(mngr)
     return managers
 
+
+def listdir_fullpath(d):
+    return [os.path.join(d, f) for f in os.listdir(d)]
 

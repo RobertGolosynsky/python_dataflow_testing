@@ -167,6 +167,8 @@ class Project(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.deactivate_venv()
-        sys.modules.clear()
+        for mod in sys.modules:
+            if mod not in self.saved_modules.keys():
+                del sys.modules[mod]
         for module_name in self.saved_modules:
             sys.modules[module_name] = self.saved_modules[module_name]

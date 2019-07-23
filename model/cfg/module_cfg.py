@@ -22,7 +22,11 @@ class ModuleCFG(object):
 
         for function_name in reflection.module_functions(module):
             func_object = getattr(module, function_name)
-            self.function_cfgs[function_name] = FunctionCFG(func_object)
+            self.function_cfgs[function_name] = FunctionCFG(func_object, [])
+
+
+    def save_to_file(self, file_path):
+        d = {}
 
             # def defs_for_line(self, line_num: str):
     #     for class_cfg in self.class_cfgs:

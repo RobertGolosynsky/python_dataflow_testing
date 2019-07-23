@@ -3,8 +3,8 @@ import sys
 from pathlib import Path
 
 from persistance import save_test_manager
-from test_manager import find_projects, TestManager
-from tracer import Tracer
+from my_manager import find_projects, TestManager
+from tracing.tracer import Tracer
 
 project = find_projects("dataset")[0]
 test_manager = TestManager(project)
