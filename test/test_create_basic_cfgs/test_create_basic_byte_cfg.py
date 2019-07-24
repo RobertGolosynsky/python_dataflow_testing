@@ -1,19 +1,11 @@
 import glob
-import inspect
 import unittest
 import os
 
-# from rpython.flowspace.objspace import build_flow
-# from rpython.flowspace.pygraph import PyGraph
-
-
-
-import dataflow.inter_class as ic
-import dataflow.def_use as du
-import dataflow.reaching_definitions as rd
 import graphs.create as gc
 import graphs.draw as gd
-import util.reflection as reflection
+import util.astroid_util as au
+
 from pathlib import Path
 
 
@@ -29,15 +21,15 @@ class TestCreateByteCFG(unittest.TestCase):
 
         for file in glob.glob(search_path):
 
-            module = reflection.try_load_module(module_path=file, under_name="module")
-            func = getattr(module, sample_function_name)
+            fns, clss = au.compile_module(file)
+            fn = [f for f in fns if f[0].__name__ == sample_function_name][0]
 
-            cfg = gc._try_create_byte_offset_cfg(func)
+            cfg = gc._try_create_byte_offset_cfg(*fn)
 
             file_name = os.path.basename(file)
             img_file = testing_root / functions_root / (file_name + "_byte.png")
             block_graph = testing_root / functions_root / (file_name + "_block.png")
 
             # gd.draw_byte_cfg_dot(cfg, [], func, file=str(img_file))
-            gd.draw_block_cfg(func, img_file=str(block_graph))
+            gd.draw_block_cfg(fn[0], img_file=str(block_graph))
 

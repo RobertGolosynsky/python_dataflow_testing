@@ -12,12 +12,11 @@ class ProjectCFG:
         self.module_cfgs = []
 
         test_modules_paths = project.find_test_modules()
-        with project as p:
-            for f in find_files(project.project_path, ".py", project.exclude_folders, test_modules_paths):
-                try:
 
-                    module_cfg = ModuleCFG(f)
-                    self.module_cfgs.append(module_cfg)
-                except NotImplementedError:
-                    print("Could not load module:", f)
+        for f in find_files(project.project_path, ".py", project.exclude_folders, test_modules_paths):
+            try:
+                module_cfg = ModuleCFG(f)
+                self.module_cfgs.append(module_cfg)
+            except NotImplementedError:
+                print("Could not load module:", f)
 

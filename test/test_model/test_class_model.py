@@ -29,16 +29,10 @@ class TestClassModel(unittest.TestCase):
 
     def test_found_inherited_methods(self):
 
-        self.assertIn("items", self.multidict_cfg.defined_methods)
+        self.assertIn("items", self.multidict_cfg.methods)
 
-        self.assertIn("put", self.multidict_cfg.overridden_methods)
-        self.assertIn("__init__", self.multidict_cfg.overridden_methods)
-
-        self.assertIn("__len__", self.multidict_cfg.inherited_methods)
-        self.assertIn("get", self.multidict_cfg.inherited_methods)
+        self.assertIn("put", self.multidict_cfg.methods)
+        self.assertIn("__init__", self.multidict_cfg.methods)
 
     def test_local_interclass_pairs(self):
-        self.assertEqual(1, len(self.multidict_cfg.interclass_pairs))
-
-    # def test_found_inherited_methods1(self):
-    #     a = 1
+        self.assertEqual(7, len(self.multidict_cfg.interclass_pairs))

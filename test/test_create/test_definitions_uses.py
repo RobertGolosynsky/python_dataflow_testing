@@ -3,9 +3,9 @@ import networkx as nx
 
 from test.test_create.test_graphs_create import is_isomorphic_with_data, functions_to_dis, check_against_saved
 from dataflow.def_use import try_create_cfg_with_definitions_and_uses
-from util import reflection
-import dataflow.def_use as du
 
+import dataflow.def_use as du
+import util.astroid_util as au
 
 class TestDefinitionUsePairs(unittest.TestCase):
 
@@ -52,8 +52,11 @@ class TestDefinitionUsePairs(unittest.TestCase):
         )
 
     def test_install_finalize_options_function(self):
-        module = reflection.try_load_module("/usr/lib/python3.6/distutils/command/install.py")
-        cls = getattr(module, "install")
-        func = getattr(cls, "finalize_options")
-        cfg = du.try_create_cfg_with_definitions_and_uses(func)
-        self.assertIsNotNone(cfg)
+        module_path = "/usr/lib/python3.6/distutils/command/install.py"
+        fns, clss = au.compile_module(module_path)
+        for f, line, args in clss["install"]:
+            if f.__name__ == "finalize_options":
+                cfg = du.try_create_cfg_with_definitions_and_uses(f, definition_line=line, args=args)
+                self.assertIsNotNone(cfg)
+                return
+        self.assertTrue(False)

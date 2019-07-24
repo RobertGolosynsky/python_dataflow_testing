@@ -79,6 +79,11 @@ class LinkedList(object):
         return l
 
 
+@some_annotation
+def check(a, b, c, *args, **kwargs):
+    print(a, b, c, args, kwargs)
+
+
 def print_list(l: LinkedList, every_x_el):
     res = []
     for i in range(l.len()):

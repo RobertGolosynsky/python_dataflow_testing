@@ -1,6 +1,46 @@
 import ast
 
 
+def compile_func(function_def):
+    line = function_def.lineno
+    args = _get_function_arg_names(function_def)
+    fn_name = function_def.name
+    fake_module = ast.Module([_clean_function_node(function_def)])
+    namespace = {}
+    fake_module_code = compile(fake_module, "", mode="exec")
+    exec(fake_module_code, namespace)
+    return namespace[fn_name], line, args
+
+
+def _get_function_arg_names(function_def):
+    args = [arg.arg for arg in function_def.args.args]
+    if function_def.args.vararg:
+        args.append(function_def.args.vararg.arg)
+    if function_def.args.kwarg:
+        args.append(function_def.args.kwarg.arg)
+    return args
+
+
+def compile_module(module_path):
+    with open(module_path) as f:
+        txt = f.read()
+        fns, clss = parse(txt)
+
+    functions = []
+    classes = {}
+
+    for f in fns:
+        functions.append(compile_func(f))
+
+    for cls in clss:
+        methods = []
+        for f in functions_of(cls):
+            methods.append(compile_func(f))
+        classes[cls.name] = methods
+
+    return functions, classes
+
+
 def parse(module_code):
     module_ast = ast.parse(module_code)
     return functions_of(module_ast), classes_of(module_ast)
@@ -37,4 +77,12 @@ def imports_of(module):
 def function_name(function_node):
     function_parent = function_node.parent
     parent_name = str(function_parent.name)
-    return parent_name+"."+function_node.name
+    return parent_name + "." + function_node.name
+
+
+def _clean_function_node(func: ast.FunctionDef):
+    # use print(ast,dump())
+    func.decorator_list = []
+    for arg in func.args.args:
+        arg.annotation = None
+    return func

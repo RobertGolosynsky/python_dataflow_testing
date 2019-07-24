@@ -8,8 +8,8 @@ class FunctionCFG:
         self.pairs = pairs
 
     @classmethod
-    def create(cls, method_object):
-        cfg = du.try_create_cfg_with_definitions_and_uses(method_object)
+    def create(cls, method_object, definition_line=None, args=None):
+        cfg = du.try_create_cfg_with_definitions_and_uses(method_object, definition_line=definition_line, args=args)
         if not cfg:
             print("Could not create cfg for", method_object)
             return None

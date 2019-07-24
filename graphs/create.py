@@ -21,18 +21,19 @@ FakeBytecodeInstruction = namedtuple("FakeBytecodeInstruction", ["offset", "opna
 exit_node_offset = 1
 
 
-def try_create_cfg(func):
-    offset_wise_cfg = _try_create_byte_offset_cfg(func)
+def try_create_cfg(func, definition_line=None, args=None):
+    offset_wise_cfg = _try_create_byte_offset_cfg(func, definition_line=definition_line, args=args)
     if not offset_wise_cfg:
         return None
-    file_path = inspect.getfile(func)
-    nx.set_node_attributes(offset_wise_cfg, file_path, name=FILE_KEY)
+    # if not file_path:
+    #     file_path = inspect.getfile(func)
+    # nx.set_node_attributes(offset_wise_cfg, file_path, name=FILE_KEY)
     return offset_wise_cfg
 
 
-def _get_instructions(func):
+def _get_instructions(func, definition_line=None):
     instrs = []
-    for ins in get_instructions(func):
+    for ins in get_instructions(func, first_line=None):
         argval = None
         if isinstance(ins.argval, str) or isinstance(ins.argval, int):
             argval = ins.argval
@@ -41,20 +42,21 @@ def _get_instructions(func):
     return instrs
 
 
-def _try_create_byte_offset_cfg(func):
+def _try_create_byte_offset_cfg(func, definition_line=None, args=None):
     try:
         bb_mgr = basic_blocks(PYTHON_VERSION, IS_PYPY, func)
         cfg = ControlFlowGraph(bb_mgr)
 
     except:
+        raise
         return None
 
     byte_blocks_graph = cfg.graph
     g = nx.MultiDiGraph()
 
-    instructions = list(_get_instructions(func))
+    instructions = list(_get_instructions(func, definition_line))
 
-    fake_instructions = _try_fake_instructions_function_arguments(func)
+    fake_instructions = _try_fake_instructions_function_arguments(func, definition_line=definition_line, args=args)
     if fake_instructions is None:
         return None
     instructions.extend(fake_instructions)
@@ -172,19 +174,23 @@ def _try_create_byte_offset_cfg(func):
     return g
 
 
-def _try_fake_instructions_function_arguments(func):
-    try:
-        _, function_definition_line = inspect.getsourcelines(func)
-    except:
-        return None
-    arg_spec = inspect.getfullargspec(func)
+def _try_fake_instructions_function_arguments(func, definition_line=None, args=None):
+    if not definition_line:
+        try:
+            _, definition_line = inspect.getsourcelines(func)
+        except:
+            raise
+            return None
 
-    args = arg_spec.args
+    if not args:
+        arg_spec = inspect.getfullargspec(func)
 
-    if arg_spec.varargs:
-        args.append(arg_spec.varargs)
-    if arg_spec.varkw:
-        args.append(arg_spec.varkw)
+        args = arg_spec.args
+
+        if arg_spec.varargs:
+            args.append(arg_spec.varargs)
+        if arg_spec.varkw:
+            args.append(arg_spec.varkw)
 
     instructions = []
     max_offset = 0
@@ -199,7 +205,7 @@ def _try_fake_instructions_function_arguments(func):
             max_offset - 2,
             "STORE_FAST",
             args[0],
-            function_definition_line
+            definition_line
         )
         instructions.append(instruction_with_line)
 

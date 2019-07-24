@@ -1,28 +1,25 @@
 from model.cfg.class_cfg import ClassCFG
 from model.cfg.function_cfg import FunctionCFG
-from util import reflection
-
+import util.astroid_util as au
 
 class ModuleCFG(object):
     def __init__(self, module_path):
-        module = reflection.try_load_module(module_path)
-
         self.function_cfgs = {}
-
         self.class_cfgs = {}
 
-        for cls_name, class_descriptor in reflection.module_classes(module):
+        fns, clss = au.compile_module(module_path)
+
+        for cls_name, methods in clss.items():
             self.class_cfgs[cls_name] = (
                 ClassCFG(
-                    getattr(module, cls_name),
                     cls_name,
-                    class_descriptor
+                    methods
                 )
             )
 
-        for function_name in reflection.module_functions(module):
-            func_object = getattr(module, function_name)
-            self.function_cfgs[function_name] = FunctionCFG(func_object, [])
+        for function, line, args in fns:
+            fn_name = function.__name__
+            self.function_cfgs[fn_name] = FunctionCFG.create(fn_name, definition_line=line, args=args)
 
 
     def save_to_file(self, file_path):

@@ -7,8 +7,8 @@ DEFINITION_KEY = "definition"
 USE_KEY = "use"
 
 
-def try_create_cfg_with_definitions_and_uses(func):
-    cfg = try_create_cfg(func)
+def try_create_cfg_with_definitions_and_uses(func, definition_line=None, args=None):
+    cfg = try_create_cfg(func, definition_line=definition_line, args=args)
     if cfg:
         return _add_definitions_and_uses(cfg)
     return None
