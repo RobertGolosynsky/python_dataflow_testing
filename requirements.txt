@@ -1,4 +1,8 @@
+pandas
+numpy
 matplotlib==2.2.2
 networkx==2.1
 xdis==4.0.1
 -e git+git://github.com/RobertGolosynsky/python-control-flow.git#egg=control_flow
+pygraphviz
+swifter==0.230

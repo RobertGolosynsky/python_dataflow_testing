@@ -5,6 +5,11 @@ import os
 
 class Tracer(object):
 
+    trace_folder = ".traces"
+    dict_file_ext = "dict"
+    trace_file_ext = "trace"
+    dict_file_name = "files"
+
     def __init__(self, keep, exclude):
         self.keep_dirs = [f for f in keep if os.path.isdir(f)]
         self.keep_files = [f for f in keep if os.path.isfile(f)]
@@ -23,8 +28,17 @@ class Tracer(object):
         self.prev_trace_func = None
         self.current_trace_name = ""
         self.current_log_file = None
+        os.makedirs(self.trace_folder, exist_ok=True)
+        idx_file = self._index_file_path()
+        self.index_file = open(idx_file, "w")
 
-        self.index_file = open("trace_file_cache.log", "w")
+    def _index_file_path(self):
+        file_name = self.dict_file_name+"."+self.dict_file_ext
+        return os.path.join(self.trace_folder, file_name)
+
+    def _trace_file_path(self, trace_name):
+        file_name = trace_name + "." + self.trace_file_ext
+        return os.path.join(self.trace_folder, file_name)
 
     def should_keep_fast(self, file):
         if file in self.keep_files:
@@ -45,20 +59,14 @@ class Tracer(object):
     def _log_line(self, *args):
         self.current_log_file.write(", ".join(map(str, args))+"\n")
 
-    # def _log_lines(self, *args):
-    #     self.current_log_file.write(", ".join(args)+"\n")
-
     def _log_new_file(self, *args):
         self.index_file.write(", ".join(map(str, args))+"\n")
         self.index_file.flush()
 
-    def _file_path_for_trace_name(self, trace_name):
-        return trace_name + ".log"
-
     def start(self, trace_name):
         self.prev_trace_func = sys.gettrace()
         self.current_trace_name = trace_name
-        self.current_log_file = open(self._file_path_for_trace_name(self.current_trace_name), "w")
+        self.current_log_file = open(self._trace_file_path(self.current_trace_name), "w")
         sys.settrace(self._tracefunc)
 
     def stop(self):
@@ -87,12 +95,14 @@ class Tracer(object):
 
         fname = code.co_filename
         file_path = fname
+        should_trace_deeper = False
         # file_path = Path(fname)
         # return self.tracefunc
         # TODO: figure out events, return seems to be irrelevant
         if self.should_keep_fast(file_path) and not self.should_exclude_fast(file_path):
-        # if True:
-        #     args = inspect.getargvalues(frame)
+            should_trace_deeper = True
+            # if True:
+            #     args = inspect.getargvalues(frame)
             # if self.interactive:
             #     code, start = inspect.getsourcelines(frame)
             #     for i, l in enumerate(code):
@@ -122,15 +132,8 @@ class Tracer(object):
                     self._log_new_file(file_idx, file_path)
 
                 self._log_line(file_idx, line, frame_self, scope)
-                # self.buff.append("{} {} {} {}\n".format(file_idx, line, frame_self, scope))
-                # if len(self.buff) > self.buff_size:
-                #     f.writelines(self.buff)
-                #     self.buff = []
-                # self.log.append((line, file_path, frame_self, scope))
-                # self.log_by_file[file_path].append((line, frame_self, scope))
-        else:
-            return None
         if event == "return":
             self.scope_stack.pop()
 
-        return self._tracefunc
+        if should_trace_deeper:
+            return self._tracefunc

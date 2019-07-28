@@ -21,7 +21,7 @@ class TestClassModel(unittest.TestCase):
         multi_dict_class_name = "MultiDict"
         multidict_cfg = None
         # self.project.add_to_path()
-        for mod_cfg in cls.project_cfg.module_cfgs:
+        for file_path, mod_cfg in cls.project_cfg.module_cfgs.items():
             for cls_name in mod_cfg.class_cfgs:
                 if cls_name == multi_dict_class_name:
                     multidict_cfg = mod_cfg.class_cfgs[cls_name]

@@ -1,4 +1,3 @@
-
 import dataflow.inter_class as ic
 from itertools import product
 
@@ -11,10 +10,24 @@ class ClassCFG(object):
         self.class_name = class_name
 
         self.methods = {}
+        self.start_line = None
+        self.end_line = None
+        if methods:
+            self.start_line = methods[0][1]
+            self.end_line = 0
 
-        for defined_method, line, args in methods:
-            m_name = defined_method.__name__
-            m = FunctionCFG.create(defined_method, definition_line=line, args=args)
+        for f in methods:
+            st_line = f[1]
+            end_line = f[3]
+            if st_line < self.start_line:
+                self.start_line = st_line
+            if end_line and self.end_line:
+                if self.end_line < end_line:
+                    self.end_line = end_line
+            if not end_line:
+                self.end_line = None
+            m_name = f[0].__name__
+            m = FunctionCFG.create(*f)
             if m:
                 self.methods[m_name] = m
 
@@ -29,6 +42,18 @@ class ClassCFG(object):
         for (n1, m1), (n2, m2) in product(self.methods.items(), without_init.items()):
             pairs = ic.inter_class_def_use_pairs(m1.cfg, m2.cfg)
             self.interclass_pairs.extend(pairs)
+
+    def get_variables(self, line):
+        if line < self.start_line:
+            return None
+        if self.end_line:
+            if line > self.end_line:
+                return None
+        for name, method_cfg in self.methods.items():
+            variables = method_cfg.get_variables(line)
+            if variables is not None:
+                return variables
+        return None
 
     #
     #

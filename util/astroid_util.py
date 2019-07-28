@@ -2,6 +2,7 @@ import ast
 
 
 def compile_func(function_def):
+    # print("compiling function:", function_def.name)
     line = function_def.lineno
     args = _get_function_arg_names(function_def)
     fn_name = function_def.name
@@ -20,22 +21,32 @@ def _get_function_arg_names(function_def):
         args.append(function_def.args.kwarg.arg)
     return args
 
+def find_end_line(first_line, first_lines):
+    filtered = [l for l in first_lines if l > first_line]
+    if len(filtered) == 0:
+        return None
+    return min(filtered)
+
 
 def compile_module(module_path):
     with open(module_path) as f:
         txt = f.read()
         fns, clss = parse(txt)
+    nodes = fns+clss
+    first_lines = [n.lineno for n in nodes]
 
     functions = []
     classes = {}
 
     for f in fns:
-        functions.append(compile_func(f))
+        end = find_end_line(f.lineno, first_lines)
+        functions.append((*compile_func(f), end))
 
     for cls in clss:
         methods = []
         for f in functions_of(cls):
-            methods.append(compile_func(f))
+            end = find_end_line(f.lineno, first_lines)
+            methods.append((*compile_func(f), end))
         classes[cls.name] = methods
 
     return functions, classes
@@ -81,8 +92,13 @@ def function_name(function_node):
 
 
 def _clean_function_node(func: ast.FunctionDef):
-    # use print(ast,dump())
+    # print(ast.dump(func))
     func.decorator_list = []
+    func.returns = None
+    func.args.defaults = []
+    # if func.returns:
+    #     func.returns.elts = []
     for arg in func.args.args:
         arg.annotation = None
+    # print(ast.dump(func))
     return func

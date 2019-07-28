@@ -2,6 +2,7 @@ from model.cfg.class_cfg import ClassCFG
 from model.cfg.function_cfg import FunctionCFG
 import util.astroid_util as au
 
+
 class ModuleCFG(object):
     def __init__(self, module_path):
         self.function_cfgs = {}
@@ -17,14 +18,24 @@ class ModuleCFG(object):
                 )
             )
 
-        for function, line, args in fns:
-            fn_name = function.__name__
-            self.function_cfgs[fn_name] = FunctionCFG.create(fn_name, definition_line=line, args=args)
+        for f in fns:
+            fn_name = f[0].__name__
+            func_cfg = FunctionCFG.create(*f)
+            if func_cfg:
+                self.function_cfgs[fn_name] = func_cfg
 
+    def get_variables(self, line):
 
-    def save_to_file(self, file_path):
-        d = {}
+        for func_cfg in self.function_cfgs:
+            variables = self.function_cfgs[func_cfg].get_variables(line)
+            if variables is not None:
+                return variables
 
+        for cls_cfg in self.class_cfgs:
+            variables = self.class_cfgs[cls_cfg].get_variables(line)
+            if variables is not None:
+                return variables
+        return None
             # def defs_for_line(self, line_num: str):
     #     for class_cfg in self.class_cfgs:
     #         defs = class_cfg.defs_at(line_num)

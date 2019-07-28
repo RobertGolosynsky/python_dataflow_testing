@@ -54,7 +54,7 @@ class TestDefinitionUsePairs(unittest.TestCase):
     def test_install_finalize_options_function(self):
         module_path = "/usr/lib/python3.6/distutils/command/install.py"
         fns, clss = au.compile_module(module_path)
-        for f, line, args in clss["install"]:
+        for f, line, args, last_line in clss["install"]:
             if f.__name__ == "finalize_options":
                 cfg = du.try_create_cfg_with_definitions_and_uses(f, definition_line=line, args=args)
                 self.assertIsNotNone(cfg)

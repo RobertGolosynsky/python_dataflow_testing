@@ -32,8 +32,8 @@ class TestInterClass(unittest.TestCase):
         func1 = [f for f in cls_funcs if f[0].__name__ == sample_function1][0]
         func2 = [f for f in cls_funcs if f[0].__name__ == sample_function2][0]
 
-        cfg1 = du.try_create_cfg_with_definitions_and_uses(*func1)
-        cfg2 = du.try_create_cfg_with_definitions_and_uses(*func2)
+        cfg1 = du.try_create_cfg_with_definitions_and_uses(*func1[:3])
+        cfg2 = du.try_create_cfg_with_definitions_and_uses(*func2[:3])
 
         pairs = ic.inter_class_def_use_pairs(cfg1, cfg2)
         self.assertEqual(len(pairs), 1)
@@ -50,8 +50,8 @@ class TestInterClass(unittest.TestCase):
         func1 = [f for f in cls_funcs if f[0].__name__ == sample_function1][0]
         func2 = [f for f in cls_funcs if f[0].__name__ == sample_function2][0]
 
-        cfg1 = du.try_create_cfg_with_definitions_and_uses(*func1)
-        cfg2 = du.try_create_cfg_with_definitions_and_uses(*func2)
+        cfg1 = du.try_create_cfg_with_definitions_and_uses(*func1[:3])
+        cfg2 = du.try_create_cfg_with_definitions_and_uses(*func2[:3])
 
         pairs = ic.inter_class_def_use_pairs(cfg1, cfg2)
         self.assertEqual(len(pairs), 2)

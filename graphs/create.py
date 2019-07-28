@@ -48,7 +48,6 @@ def _try_create_byte_offset_cfg(func, definition_line=None, args=None):
         cfg = ControlFlowGraph(bb_mgr)
 
     except:
-        raise
         return None
 
     byte_blocks_graph = cfg.graph
@@ -175,14 +174,14 @@ def _try_create_byte_offset_cfg(func, definition_line=None, args=None):
 
 
 def _try_fake_instructions_function_arguments(func, definition_line=None, args=None):
+    # print(func, definition_line, args)
     if not definition_line:
         try:
             _, definition_line = inspect.getsourcelines(func)
         except:
-            raise
             return None
 
-    if not args:
+    if args is None:
         arg_spec = inspect.getfullargspec(func)
 
         args = arg_spec.args

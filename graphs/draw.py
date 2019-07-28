@@ -82,8 +82,8 @@ def draw_byte_cfg_dot(g, pairs, func,
         if "color" not in edge_data:
             edge_data["color"] = control_edge_color
 
-    code, start_line = inspect.getsourcelines(func)
-    code = [line[:-1] for line in code]
+    # code, start_line = inspect.getsourcelines(func)
+    # code = [line[:-1] for line in code]
 
     for i, p in enumerate(pairs):
         def_node, data = gu.node_where(cfg, gc.LINE_KEY, p.definition.line)
@@ -102,8 +102,9 @@ def draw_byte_cfg_dot(g, pairs, func,
             # new_label = str(line) + ": " + code_line.strip().replace("\\","\\\\")
             # if instrs_range:
             #     new_label+=" @ "+instrs_range
-            code_line = code[line - start_line]
-            code_line = code_line.strip().replace("\\", "\\\\")
+            # code_line = code[line - start_line]
+            # code_line = code_line.strip().replace("\\", "\\\\")
+            code_line = ""
             new_label = "%i: %s %s @ %i: %s" % (inst.offset, inst.opname, str(inst.argval), line, code_line)
             mapping[node] = new_label
 

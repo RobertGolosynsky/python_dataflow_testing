@@ -3,7 +3,7 @@ import subprocess
 import sys
 import urllib.request
 import venv
-
+import pathlib
 import astroid
 
 import util.astroid_util as au
@@ -21,7 +21,7 @@ class Project(object):
 
     def __init__(self, project_path):
         self.venv_activated = False
-        self.project_path = str(project_path)
+        self.project_path = str(pathlib.Path(project_path).resolve())
         self.project_name = os.path.basename(self.project_path)
         self.tests = []
 
