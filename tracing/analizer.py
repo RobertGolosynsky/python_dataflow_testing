@@ -44,13 +44,49 @@ class Trace:
         return trace_batches
 
 
+class VariableIndexer:
+
+    def __init__(self):
+        self.attr_counter = 2
+        self.variable_counter = 1
+        self.var_index = {}
+        self.attr_index = {}
+
+    def next_attr_index(self):
+        self.attr_counter += 2
+        return self.attr_counter
+
+    def next_var_index(self):
+        self.variable_counter += 2
+        return self.variable_counter
+
+    def is_attr(self, var_name):
+        return var_name.startswith("self.")
+
+    def index_for(self, var_name):
+        if self.is_attr(var_name):
+            if var_name in self.attr_index:
+                return self.attr_index[var_name]
+            else:
+                idx = self.next_attr_index()
+                self.attr_index[var_name] = idx
+                return idx
+        else:
+            if var_name in self.var_index:
+                return self.var_index[var_name]
+            else:
+                idx = self.next_var_index()
+                self.var_index[var_name] = idx
+                return idx
+
+
 class DataflowAnalyzer:
 
     def __init__(self, folder, project_cfg: ProjectCFG):
         self.folder = folder
         self.project_cfg = project_cfg
         self.files_dict = self._read_file_dict()
-        pass
+        self.indexer = VariableIndexer()
 
     def _read_file_dict(self):
         files = [f for f in glob.glob(os.path.join(self.folder, "*." + Tracer.dict_file_ext),
@@ -76,6 +112,7 @@ class DataflowAnalyzer:
             f_name = os.path.basename(f)
             self._add_extra_columns(t)
             self._add_def_use(t)
+            print(t.df)
             pairs = self._add_reaching_definitions(t)
             import pickle
             with open(f+"_pairs", "wb") as f:
@@ -84,8 +121,8 @@ class DataflowAnalyzer:
 
     @timing
     def _add_extra_columns(self, trace):
-        trace.df['definitions'] = [[] for _ in range(len(trace.df))]
-        trace.df['uses'] = [[] for _ in range(len(trace.df))]
+        trace.df['definitions'] = [set() for _ in range(len(trace.df))]
+        trace.df['uses'] = [set() for _ in range(len(trace.df))]
         trace.df['reach_out'] = [[] for _ in range(len(trace.df))]
 
     @timing
@@ -96,11 +133,10 @@ class DataflowAnalyzer:
             vars = self.project_cfg.get_variables(file_path, row["line"])
             if vars:
                 defs, uses = vars
-                # print("defs:", defs, "uses:", uses)
                 if return_defs:
-                    return defs
+                    return [self.indexer.index_for(d) for d in defs]
                 else:
-                    return uses
+                    return [self.indexer.index_for(u) for u in uses]
             return []
 
         trace.df["definitions"] = trace.df.apply(transform, return_defs=True, axis=1)
