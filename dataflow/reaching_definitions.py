@@ -6,8 +6,8 @@ import dataflow.def_use as du
 import graphs.create as cr
 from collections import namedtuple
 
-Var = namedtuple("VariableDefinition", ["file", "line", "varname"])
-Pair = namedtuple("DefinitionUsePair", ["definition", "use"])
+Var = namedtuple("Var", ["file", "line", "varname"])
+Pair = namedtuple("Pair", ["definition", "use"])
 
 
 def definition_use_pairs(cfg: nx.DiGraph, initial_set=None):

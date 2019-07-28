@@ -37,4 +37,4 @@ class TestProjectCFG(unittest.TestCase):
 
     def test_get_variables_wrong_line(self):
         variables = self.project_cfg.get_variables(str(self.ll_module_path), 1100)
-        self.assertEqual(variables, None)
+        self.assertEqual(variables, ([], []))

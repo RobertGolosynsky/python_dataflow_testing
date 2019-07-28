@@ -130,6 +130,5 @@ managers
 python-control-flow
 *.png
 .traces
-expected_cfgs
-expected_def_use
 *.pfl
+.flow_graph
