@@ -1,109 +1,154 @@
+import inspect
+from loguru import logger
 import sys
-from collections import defaultdict
 import os
+import json
+from time import time
+from cpp.cpp_import import load_cpp_extension
+
+matcher_ext = load_cpp_extension("matcher_ext")
 
 
 class Tracer(object):
-
-    trace_folder = ".traces"
-    dict_file_ext = "dict"
     trace_file_ext = "trace"
-    dict_file_name = "files"
+    files_index_file = "files_index.json"
+    trace_folder = ".traces"
 
-    def __init__(self, keep, exclude):
+    def __init__(self, keep, exclude, trace_folder_parent="./"):
+
+        self.trace_folder = os.path.join(trace_folder_parent, self.trace_folder)
+
         self.keep_dirs = [f for f in keep if os.path.isdir(f)]
         self.keep_files = [f for f in keep if os.path.isfile(f)]
 
         self.exclude_dirs = [f for f in exclude if os.path.isdir(f)]
         self.exclude_files = [f for f in exclude if os.path.isfile(f)]
-        self.log = list()
-        self.log_by_file = defaultdict(list)
+
         self.interactive = False
         self.scope_stack = list()
         self.scope_counter = 0
         self.scope_stack.append(self.scope_counter)
-        self.file_cache = []
-        self.buff = []
-        self.buff_size = 100000
+        self.file_cache = {}
+        self.current_log_files = {}
+
         self.prev_trace_func = None
         self.current_trace_name = ""
-        self.current_log_file = None
-        os.makedirs(self.trace_folder, exist_ok=True)
+
+        import shutil
+        shutil.rmtree(self.trace_folder, ignore_errors=True)
+
+        os.makedirs(self.trace_folder, exist_ok=False)
         idx_file = self._index_file_path()
         self.index_file = open(idx_file, "w")
+        self.fileNameHelper = matcher_ext.FileMatcher(self.keep_files, self.keep_dirs,
+                                                      self.exclude_files, self.exclude_dirs)
+
+        logger.info("Created Tracer object with logging to {trace_folder_parent}, {keep}, {exclude}",
+                    trace_folder_parent=trace_folder_parent, keep=keep, exclude=exclude)
+        # remove this
+
+        self.after_write = 0
+        self.before_write_log = 0
+        self.before_call_check = 0
+        self.before_locals = 0
+        self.check_time = 0
+        self.before_if = 0
+
+    def times(self):
+        return {
+            "each_trace": self.before_if,
+            "if_time": self.check_time,
+            "get_locals": self.before_locals,
+            "check_if_comprehension": self.before_call_check,
+            "scope_logic": self.before_write_log,
+            "write_trace": self.after_write,
+
+        }
 
     def _index_file_path(self):
-        file_name = self.dict_file_name+"."+self.dict_file_ext
-        return os.path.join(self.trace_folder, file_name)
+        return os.path.join(self.trace_folder, self.files_index_file)
 
-    def _trace_file_path(self, trace_name):
-        file_name = trace_name + "." + self.trace_file_ext
-        return os.path.join(self.trace_folder, file_name)
+    def _trace_file_path(self, trace_name, file_under_trace):
+        this_trace_folder = os.path.join(self.trace_folder, trace_name)
+        os.makedirs(this_trace_folder, exist_ok=True)
+        file_name = str(file_under_trace) + "." + self.trace_file_ext
+        return os.path.join(this_trace_folder, file_name)
 
-    def should_keep_fast(self, file):
-        if file in self.keep_files:
-            return True
-        for keep_dir in self.keep_dirs:
-            if file.startswith(keep_dir):
-                return True
-        return False
-
-    def should_exclude_fast(self, file):
-        if file in self.exclude_files:
-            return True
-        for exclude_dir in self.exclude_dirs:
-            if file.startswith(exclude_dir):
-                return True
-        return False
-
-    def _log_line(self, *args):
-        self.current_log_file.write(", ".join(map(str, args))+"\n")
-
-    def _log_new_file(self, *args):
-        self.index_file.write(", ".join(map(str, args))+"\n")
-        self.index_file.flush()
+    def _log_line(self, file, line, self_ref, scope):
+        if file not in self.current_log_files:
+            self.current_log_files[file] = open(self._trace_file_path(
+                self.current_trace_name,
+                file
+            ), "w")
+        self.current_log_files[file].write(", ".join(map(str, [file, line, self_ref, scope])) + "\n")
 
     def start(self, trace_name):
+        logger.debug("Tracer started with trace name {trace_name}", trace_name=trace_name)
         self.prev_trace_func = sys.gettrace()
         self.current_trace_name = trace_name
-        self.current_log_file = open(self._trace_file_path(self.current_trace_name), "w")
+        self.current_log_files = {}
         sys.settrace(self._tracefunc)
 
     def stop(self):
-        sys.settrace(self.prev_trace_func)
-        self.current_trace_name = ""
-        self.current_log_file.close()
-
-    def trace(self, function_to_trace):
-        self.log = list()
-        self.log_by_file = defaultdict(list)
-        sys.settrace(self._tracefunc)
-        function_to_trace()
         sys.settrace(None)
-        self.current_log_file.writelines(self.buff)
-        return self.log
+        logger.debug("Tracer stopped with trace name {trace_name}", trace_name=self.current_trace_name)
+        [f.close() for f in self.current_log_files.values()]
 
-    def _tracefunc(self, frame, event, arg):
+        self.current_log_files = {}
+        self.current_trace_name = ""
+        sys.settrace(self.prev_trace_func)
+        self.prev_trace_func = None
 
-        if event == "call":
-            self.scope_counter += 1
-            self.scope_stack.append(self.scope_counter)
+    def fullstop(self):
+        json.dump(
+            {v: k for k, v in self.file_cache.items()},
+            self.index_file,
+            indent=2
+        )
+        self.index_file.close()
+        logger.debug("Tracer closed, file index saved to {p}", p=self._index_file_path())
 
-        scope = self.scope_stack[-1]
-        code = frame.f_code
-        line = frame.f_lineno
+    def _tracefunc(self, frame, event, _):
+        # st = time()
+        file_path = frame.f_code.co_filename
 
-        fname = code.co_filename
-        file_path = fname
         should_trace_deeper = False
-        # file_path = Path(fname)
-        # return self.tracefunc
-        # TODO: figure out events, return seems to be irrelevant
-        if self.should_keep_fast(file_path) and not self.should_exclude_fast(file_path):
+
+        interructive = False
+
+        # self.before_if += (time() - st)
+        st = time()
+        if self.fileNameHelper.should_include(file_path):
+            self.check_time += (time() - st)
+            # st = time()
+
+            line = frame.f_lineno
+            is_comprehension = False
+            f_locals = frame.f_locals
+
+            # self.before_locals += (time() - st)
+            # st = time()
+
+            if len(f_locals) > 0 and ".0" in f_locals:
+                is_comprehension = True
+
+            # self.before_call_check += (time() - st)
+            # st = time()
+            if event == "call":
+                self.scope_counter += 1
+                self.scope_stack.append(self.scope_counter)
+            elif event == "return":
+                self.scope_stack.pop()
+
+            scope = self.scope_stack[-1]
+
+            # self.before_write_log += (time() - st)
+            # st = time()
+
             should_trace_deeper = True
-            # if True:
+            # if interructive:
             #     args = inspect.getargvalues(frame)
-            # if self.interactive:
+            # # if self.interactive:
             #     code, start = inspect.getsourcelines(frame)
             #     for i, l in enumerate(code):
             #         cur = start+i
@@ -123,17 +168,16 @@ class Tracer(object):
             else:
                 frame_self = -1
 
-            if event == "line" or event == "call":
+            if is_comprehension:
+                pass
+            elif event == "line" or event == "call":
                 if file_path in self.file_cache:
-                    file_idx = self.file_cache.index(file_path)
+                    file_idx = self.file_cache[file_path]
                 else:
-                    self.file_cache.append(file_path)
+                    self.file_cache[file_path] = len(self.file_cache)
                     file_idx = len(self.file_cache) - 1
-                    self._log_new_file(file_idx, file_path)
-
                 self._log_line(file_idx, line, frame_self, scope)
-        if event == "return":
-            self.scope_stack.pop()
+            # self.after_write += (time() - st)
 
         if should_trace_deeper:
             return self._tracefunc

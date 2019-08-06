@@ -1,13 +1,13 @@
 import inspect
 import os
 import subprocess
+from collections import defaultdict
 from tempfile import TemporaryFile, mkstemp
 
 from networkx.drawing.nx_agraph import graphviz_layout
 import matplotlib.pyplot as plt
 
 import networkx as nx
-
 
 from graphs import create as gc
 import graphs.util as gu
@@ -20,8 +20,7 @@ def draw_byte_cfg(g):
 
 
 def draw_with_code(g, pairs, func, control_edge_color="black", flow_edge_color="green", file=None):
-
-    cfg = g.copy() # nx.MultiDiGraph()
+    cfg = g.copy()  # nx.MultiDiGraph()
     # cfg.add_nodes_from(g)
     # cfg.add_edges_from(g.edges)
 
@@ -47,16 +46,16 @@ def draw_with_code(g, pairs, func, control_edge_color="black", flow_edge_color="
         inst_g = attrs.get(gc.INSTRUCTIONS_KEY, None)
         instrs_range = None
         if inst_g:
-            codes = [d.get(gc.INSTRUCTION_KEY, None) for n, d in inst_g.nodes(data=True) ]
+            codes = [d.get(gc.INSTRUCTION_KEY, None) for n, d in inst_g.nodes(data=True)]
             codes = [c.offset for c in codes if c]
             mn = min(codes)
             mx = max(codes)
             instrs_range = "%i-%i" % (mn, mx)
         if line:
-            code_line = code[line-start_line]
-            new_label = str(line) + ": " + code_line.strip().replace("\\","\\\\")
+            code_line = code[line - start_line]
+            new_label = str(line) + ": " + code_line.strip().replace("\\", "\\\\")
             if instrs_range:
-                new_label+=" @ "+instrs_range
+                new_label += " @ " + instrs_range
             mapping[node] = new_label
 
     cfg = nx.relabel_nodes(cfg, mapping)
@@ -73,9 +72,7 @@ def draw_byte_cfg_dot(g, pairs, func,
                       control_edge_color="black",
                       flow_edge_color="green",
                       file=None):
-
     cfg = g.copy()
-
 
     for e in cfg.edges:
         edge_data = cfg.edges[e]
@@ -97,7 +94,6 @@ def draw_byte_cfg_dot(g, pairs, func,
         line = attrs.get(gc.LINE_KEY, None)
         inst = attrs.get(gc.INSTRUCTION_KEY, None)
         if inst and line:
-
             # code_line = code[line-start_line]
             # new_label = str(line) + ": " + code_line.strip().replace("\\","\\\\")
             # if instrs_range:
@@ -147,7 +143,7 @@ def draw_block_cfg(func, img_file=None):
 
 def dump(line_cfg, source_start, source_lines, attr_keys=None):
     for i, l in enumerate(source_lines):
-        line_num = i+source_start
+        line_num = i + source_start
 
         line_node, data = gu.node_where(line_cfg, gc.LINE_KEY, line_num)
         s = ""
@@ -158,3 +154,27 @@ def dump(line_cfg, source_start, source_lines, attr_keys=None):
             else:
                 s = data
         print(line_num, l[:-1].split("#")[0], "#", s)
+
+
+def source_w_pairs(source_file, pairs, trace=[]):
+    hit_lines = set(trace)
+    pair_suffs = defaultdict(list)
+    c = 0
+    with open(source_file) as f:
+        source_lines = f.readlines()
+    for i, l in enumerate(source_lines):
+        line_num = i + 1
+        for pair in pairs:
+            if pair[0] == line_num:
+                c += 1
+                pair_suffs[pair[0]].append(">${}".format(c))
+                pair_suffs[pair[1]].append("<${}".format(c))
+    for i, l in enumerate(source_lines):
+        line_num = i + 1
+        s = ", ".join(pair_suffs[line_num])
+
+        if line_num in hit_lines:
+            marker = ">>>"
+        else:
+            marker = "   "
+        print(line_num, marker, l[:-1].split("#")[0], s)

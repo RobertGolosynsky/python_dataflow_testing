@@ -7,22 +7,10 @@ from model.cfg.project_cfg import ProjectCFG
 from tracing.tracer import Tracer
 import util.find as uf
 import pandas as pd
-import swifter
 
-from functools import wraps
 from time import time
 
-
-def timing(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        start = time()
-        result = f(*args, **kwargs)
-        end = time()
-        print('Elapsed time {}: {}'.format(f.__name__, end - start))
-        return result
-
-    return wrapper
+from util.misc import timing
 
 
 class Trace:
@@ -60,7 +48,8 @@ class VariableIndexer:
         self.variable_counter += 2
         return self.variable_counter
 
-    def is_attr(self, var_name):
+    @staticmethod
+    def is_attr(var_name):
         return var_name.startswith("self.")
 
     def index_for(self, var_name):
@@ -109,14 +98,14 @@ class DataflowAnalyzer:
         for i, f in enumerate(trace_files):
             print("Progress:", i * 100 // len(trace_files))
             t = Trace(f)
-            f_name = os.path.basename(f)
-            self._add_extra_columns(t)
+            # f_name = os.path.basename(f)
+            # self._add_extra_columns(t)
             self._add_def_use(t)
-            print(t.df)
+            # print(t.df)
             pairs = self._add_reaching_definitions(t)
-            import pickle
-            with open(f+"_pairs", "wb") as f:
-                pickle.dump(pairs, f)
+            # import pickle
+            # with open(f+"_pairs", "wb") as f:
+            #     pickle.dump(pairs, f)
         return d
 
     @timing

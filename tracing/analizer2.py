@@ -8,24 +8,13 @@ from tracing.tracer import Tracer
 import util.find as uf
 import pandas as pd
 
-from functools import wraps
 from time import time
 
 import multiprocessing as mp
 
+from util.misc import timing
+
 pool = mp.Pool(mp.cpu_count())
-
-
-def timing(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        start = time()
-        result = f(*args, **kwargs)
-        end = time()
-        print('Elapsed time {}: {}'.format(f.__name__, end - start))
-        return result
-
-    return wrapper
 
 
 class Trace:

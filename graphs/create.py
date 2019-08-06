@@ -8,6 +8,7 @@ from control_flow.graph import BB_JUMP_UNCONDITIONAL, FLAG2NAME, \
     BB_NOFOLLOW, BB_END_FINALLY, BB_FINALLY, BB_STARTS_POP_BLOCK
 
 import networkx as nx
+from loguru import logger
 
 from collections import namedtuple
 import graphs.util as gu
@@ -47,7 +48,8 @@ def _try_create_byte_offset_cfg(func, definition_line=None, args=None):
         bb_mgr = basic_blocks(PYTHON_VERSION, IS_PYPY, func)
         cfg = ControlFlowGraph(bb_mgr)
 
-    except:
+    except Exception:
+        logger.exception("Error during CFG creation")
         return None
 
     byte_blocks_graph = cfg.graph

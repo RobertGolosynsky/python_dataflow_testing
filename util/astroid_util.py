@@ -1,8 +1,9 @@
 import ast
+from loguru import logger
 
 
 def compile_func(function_def):
-    # print("compiling function:", function_def.name)
+    logger.debug("Compiling function {n}", n=function_def.name)
     line = function_def.lineno
     args = _get_function_arg_names(function_def)
     fn_name = function_def.name
@@ -21,7 +22,8 @@ def _get_function_arg_names(function_def):
         args.append(function_def.args.kwarg.arg)
     return args
 
-def find_end_line(first_line, first_lines):
+
+def _find_end_line(first_line, first_lines):
     filtered = [l for l in first_lines if l > first_line]
     if len(filtered) == 0:
         return None
@@ -29,23 +31,25 @@ def find_end_line(first_line, first_lines):
 
 
 def compile_module(module_path):
+    logger.debug("Compiling module {p}", p=module_path)
     with open(module_path) as f:
         txt = f.read()
         fns, clss = parse(txt)
-    nodes = fns+clss
+
+    nodes = fns + clss
     first_lines = [n.lineno for n in nodes]
 
     functions = []
     classes = {}
 
     for f in fns:
-        end = find_end_line(f.lineno, first_lines)
+        end = _find_end_line(f.lineno, first_lines)
         functions.append((*compile_func(f), end))
 
     for cls in clss:
         methods = []
         for f in functions_of(cls):
-            end = find_end_line(f.lineno, first_lines)
+            end = _find_end_line(f.lineno, first_lines)
             methods.append((*compile_func(f), end))
         classes[cls.name] = methods
 

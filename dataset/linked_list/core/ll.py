@@ -79,6 +79,13 @@ class LinkedList(object):
         return l
 
 
+def some_annotation(func):
+    def some_wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    return some_wrapper
+
+
 @some_annotation
 def check(a, b, c, *args, **kwargs):
     print(a, b, c, args, kwargs)

@@ -13,7 +13,8 @@ def inter_class_def_use_pairs(cfg1: nx.DiGraph, cfg2: nx.DiGraph):
     reach_out_cfg1_exit = reach_out_1[cfg1_exit]
 
     reach_out_cfg1_exit = {definition for definition in reach_out_cfg1_exit
-                           if definition.varname.startswith("self.")}
+                           if definition.varname[:5] == "self."}
+                           # if definition.varname.startswith("self.")}
 
     initial_set = {cfg2_entry: reach_out_cfg1_exit}
 
