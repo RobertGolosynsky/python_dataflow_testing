@@ -132,3 +132,10 @@ python-control-flow
 .traces
 *.pfl
 .flow_graph
+cpp/du_pairs/cmake-build-debug/
+
+*.cppimporthash
+
+expected_cfgs/
+
+expected_def_use/

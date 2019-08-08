@@ -19,6 +19,7 @@ class VarIndexFactory:
         return CPPVariableIndex(vi.defs, vi.uses)
         pass
 
+
 #
 # class VarIndex:
 #
@@ -73,6 +74,27 @@ class VarIndexFactory:
 #         return [get_vars_func(r[1], r[2], "definitions") for r in np_array], \
 #                [get_vars_func(r[1], r[2], "uses") for r in np_array]
 #
+class VarToInt:
+
+    def __init__(self):
+        self.idx = {}
+        self.local_var_counter = 0
+        self.object_var_counter = 1
+
+    def as_int(self, var_name):
+        as_int = self.idx.get(var_name, None)
+        if as_int:
+            return as_int
+        else:
+            if var_name.startswith("self."):
+                self.object_var_counter += 2
+                self.idx[var_name] = self.object_var_counter
+                return self.object_var_counter
+            else:
+                self.local_var_counter += 2
+                self.idx[var_name] = self.local_var_counter
+                return self.local_var_counter
+
 
 class VarIndex:
 
@@ -84,10 +106,35 @@ class VarIndex:
         )
 
     def __init__(self, variables_index_json, file_index_json):
+        self.var_to_int = VarToInt()
         self.index = self.as_int_index(variables_index_json, file_index_json)
         self.defs = self.index["definitions"]
         self.uses = self.index["uses"]
-        self.mapping = {}
+
+    def get_object_vars(self, np_array):
+        defs = []
+        uses = []
+        for r in np_array:
+            file, line = r[1], r[2]
+            defs_on_line = []
+            uses_on_line = []
+
+            d = self.defs.get(file, None)
+
+            if d:
+                for var_name in d.get(line, []):
+                    if var_name % 2 == 1:
+                        defs_on_line.append(var_name)
+            defs.append(defs_on_line)
+
+            u = self.uses.get(file, None)
+            if u:
+                for var_name in u.get(line, []):
+                    if var_name % 2 == 1:
+                        uses_on_line.append(var_name)
+            uses.append(uses_on_line)
+
+        return defs, uses
 
     def get_vars(self, np_array):
         defs = []
@@ -103,20 +150,9 @@ class VarIndex:
 
         return defs, uses
 
-    @staticmethod
-    def as_int(s, idx):
-        as_int = idx.get(s, None)
-        if as_int:
-            return as_int
-        else:
-            idx[s] = len(idx)
-        return len(idx) - 1
-
-    @staticmethod
-    def as_int_index(index, file_index):
+    def as_int_index(self, index, file_index):
         file_index = {v: k for k, v in file_index.items()}
         int_index = {}
-        idx = {}
         for vtype in index:
             int_index[vtype] = {}
             for file in index[vtype]:
@@ -126,7 +162,7 @@ class VarIndex:
                     int_index[vtype][file_key] = {}
                     for line in index[vtype][file]:
                         variables = index[vtype][file][line]
-                        ints = [VarIndex.as_int(v, idx) for v in variables]
+                        ints = [self.var_to_int.as_int(v) for v in variables]
                         int_index[vtype][file_key][int(line)] = ints
 
         return int_index

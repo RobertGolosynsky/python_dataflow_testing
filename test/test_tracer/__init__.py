@@ -20,7 +20,7 @@ LINKED_LIST_LL = LINKED_LIST_ROOT / "core" / "ll.py"
 
 
 def create_new_temp_dir():
-    folder_name = datetime.now().strftime('%Y-%m-%d_%H-%M-%S/%f')
+    folder_name = datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')
     folder_path = TEMP_DIRECTORY / PROJECT_NAME.lower() / folder_name
     os.makedirs(folder_path, exist_ok=False)
     return folder_path

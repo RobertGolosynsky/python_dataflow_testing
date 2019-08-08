@@ -1,4 +1,6 @@
 import inspect
+from collections import defaultdict
+
 from loguru import logger
 import sys
 import os
@@ -6,11 +8,14 @@ import json
 from time import time
 from cpp.cpp_import import load_cpp_extension
 
+import shutil
+
 matcher_ext = load_cpp_extension("matcher_ext")
 
 
 class Tracer(object):
     trace_file_ext = "trace"
+    scopes_file_ext = "scopes"
     files_index_file = "files_index.json"
     trace_folder = ".traces"
 
@@ -25,21 +30,28 @@ class Tracer(object):
         self.exclude_files = [f for f in exclude if os.path.isfile(f)]
 
         self.interactive = False
+
         self.scope_stack = list()
         self.scope_counter = 0
         self.scope_stack.append(self.scope_counter)
-        self.file_cache = {}
+
+        self.file_index = {}
+        self.last_index = defaultdict(int)
+
         self.current_log_files = {}
+        self.current_scope_files = {}
 
         self.prev_trace_func = None
         self.current_trace_name = ""
 
-        import shutil
         shutil.rmtree(self.trace_folder, ignore_errors=True)
 
         os.makedirs(self.trace_folder, exist_ok=False)
+
         idx_file = self._index_file_path()
+
         self.index_file = open(idx_file, "w")
+
         self.fileNameHelper = matcher_ext.FileMatcher(self.keep_files, self.keep_dirs,
                                                       self.exclude_files, self.exclude_dirs)
 
@@ -74,7 +86,23 @@ class Tracer(object):
         file_name = str(file_under_trace) + "." + self.trace_file_ext
         return os.path.join(this_trace_folder, file_name)
 
+    def _scope_file_path(self, trace_name, file_under_trace):
+        this_trace_folder = os.path.join(self.trace_folder, trace_name)
+        os.makedirs(this_trace_folder, exist_ok=True)
+        file_name = str(file_under_trace) + "." + self.scopes_file_ext
+        return os.path.join(this_trace_folder, file_name)
+
+    def _log_scope_closed(self, file, scope):
+        if file not in self.current_scope_files:
+            self.current_scope_files[file] = open(self._scope_file_path(
+                self.current_trace_name,
+                file
+            ), "w")
+        idx = self.last_index[file]
+        self.current_scope_files[file].write(str(scope) + ", " + str(idx) + "\n")
+
     def _log_line(self, file, line, self_ref, scope):
+        self.last_index[file] += 1
         if file not in self.current_log_files:
             self.current_log_files[file] = open(self._trace_file_path(
                 self.current_trace_name,
@@ -87,25 +115,29 @@ class Tracer(object):
         self.prev_trace_func = sys.gettrace()
         self.current_trace_name = trace_name
         self.current_log_files = {}
+        self.current_scope_files = {}
+        self.last_index = defaultdict(int)
         sys.settrace(self._tracefunc)
 
     def stop(self):
         sys.settrace(None)
         logger.debug("Tracer stopped with trace name {trace_name}", trace_name=self.current_trace_name)
         [f.close() for f in self.current_log_files.values()]
-
-        self.current_log_files = {}
+        [f.close() for f in self.current_scope_files.values()]
+        # self.current_log_files = {}
+        # self.current_scope_files = {}
         self.current_trace_name = ""
         sys.settrace(self.prev_trace_func)
         self.prev_trace_func = None
 
     def fullstop(self):
         json.dump(
-            {v: k for k, v in self.file_cache.items()},
+            {v: k for k, v in self.file_index.items()},
             self.index_file,
             indent=2
         )
         self.index_file.close()
+
         logger.debug("Tracer closed, file index saved to {p}", p=self._index_file_path())
 
     def _tracefunc(self, frame, event, _):
@@ -138,6 +170,8 @@ class Tracer(object):
                 self.scope_counter += 1
                 self.scope_stack.append(self.scope_counter)
             elif event == "return":
+                file_idx = self.file_index[file_path]
+                self._log_scope_closed(file=file_idx, scope=self.scope_stack[-1])
                 self.scope_stack.pop()
 
             scope = self.scope_stack[-1]
@@ -171,13 +205,13 @@ class Tracer(object):
             if is_comprehension:
                 pass
             elif event == "line" or event == "call":
-                if file_path in self.file_cache:
-                    file_idx = self.file_cache[file_path]
+                if file_path in self.file_index:
+                    file_idx = self.file_index[file_path]
                 else:
-                    self.file_cache[file_path] = len(self.file_cache)
-                    file_idx = len(self.file_cache) - 1
+                    self.file_index[file_path] = len(self.file_index)
+                    file_idx = len(self.file_index) - 1
                 self._log_line(file_idx, line, frame_self, scope)
             # self.after_write += (time() - st)
 
-        if should_trace_deeper:
-            return self._tracefunc
+        # if should_trace_deeper:
+        return self._tracefunc
