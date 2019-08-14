@@ -6,6 +6,8 @@ import dataflow.def_use as du
 import graphs.create as cr
 from collections import namedtuple
 
+from graphs.keys import FILE_KEY, LINE_KEY
+
 Var = namedtuple("Var", ["file", "line", "varname"])
 Pair = namedtuple("Pair", ["definition", "use"])
 
@@ -16,8 +18,8 @@ def definition_use_pairs(cfg: nx.DiGraph, initial_set=None):
     for node in cfg.nodes():
         node_attrs = cfg.nodes[node]
         use = node_attrs.get(du.USE_KEY, None)
-        use_file = node_attrs.get(cr.FILE_KEY, "UNDEFINED")
-        use_line = node_attrs.get(cr.LINE_KEY, -1)
+        use_file = node_attrs.get(FILE_KEY, "UNDEFINED")
+        use_line = node_attrs.get(LINE_KEY, -1)
 
         if use:
             reach_in = reaching_deffs[node]
@@ -48,8 +50,8 @@ def _reaching_definitions(cfg: nx.DiGraph, initial_set=None):
         node_reach_out = set()
         node_attrs: dict = cfg.nodes[a_node]
         node_definition = node_attrs.get(du.DEFINITION_KEY, None)
-        node_file = node_attrs.get(du.FILE_KEY, "UNDEFINED")
-        node_line = node_attrs.get(cr.LINE_KEY, -1)
+        node_file = node_attrs.get(FILE_KEY, "UNDEFINED")
+        node_line = node_attrs.get(LINE_KEY, -1)
         if node_definition:
             for reaching_var in node_reach_in:
                 if not reaching_var.varname == node_definition:

@@ -22,30 +22,31 @@ class TestCreateByteCFG(unittest.TestCase):
 
         for file in glob.glob(search_path):
 
-            fns, clss = au.compile_module(file)
-            fn = [f for f in fns if f[0].__name__ == sample_function_name][0]
+            fns, clss, _ = au.compile_module(file)
+            function = [f for f in fns if f.func.__name__ == sample_function_name][0]
 
-            cfg = gc._try_create_byte_offset_cfg(*fn[:3])
+            cfg = gc.try_create_cfg(function.func, function.first_line, function.argument_names)
 
             file_name = os.path.basename(file)
             img_file = testing_root / functions_root / (file_name + "_byte.png")
             block_graph = testing_root / functions_root / (file_name + "_block.png")
 
-            gd.draw_byte_cfg_dot(cfg, [], fn[0], file=str(img_file))
-            gd.draw_block_cfg(fn[0], img_file=str(block_graph))
+            gd.draw_byte_cfg_dot(cfg.g, [], function.func, file=str(img_file))
+            gd.draw_block_cfg(function.func, img_file=str(block_graph))
 
     def test_create_astroid_util_cfg(self):
         astroid_util = str(testing_root.parent / "util" / "astroid_util.py")
 
-        fns, clss = au.compile_module(astroid_util)
-        for f in fns:
-            if not f[0]:
+        fns, clss, _ = au.compile_module(astroid_util)
+        for function in fns:
+            if not function.func:
                 continue
-            cfg = du.try_create_cfg_with_definitions_and_uses(*f[:3])
+            cfg = du.try_create_cfg_with_definitions_and_uses(function.func, function.first_line, function.argument_names)
             if not cfg:
-                print("cant create cfg", f)
+                print("cant create cfg", function.func)
                 continue
-
+        self.assertEqual(len(fns), 12)
+        self.assertEqual(len(clss), 1)
             # file_name = f[0].__name__
             # img_file = Path("astroid_cfgs") / (file_name + "_byte.png")
             # block_graph = Path("astroid_cfgs") / (file_name + "_block.png")

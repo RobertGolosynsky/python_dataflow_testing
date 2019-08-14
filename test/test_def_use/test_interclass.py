@@ -25,17 +25,17 @@ class TestInterClass(unittest.TestCase):
         sample_function2 = "append"
         p = Project(linked_list_root)
 
-        fns, clss = au.compile_module(linked_list)
+        fns, clss, _ = au.compile_module(linked_list)
 
         cls_funcs = clss[sample_class]
 
-        func1 = [f for f in cls_funcs if f[0].__name__ == sample_function1][0]
-        func2 = [f for f in cls_funcs if f[0].__name__ == sample_function2][0]
+        func1 = [f for f in cls_funcs if f.func.__name__ == sample_function1][0]
+        func2 = [f for f in cls_funcs if f.func.__name__ == sample_function2][0]
 
-        cfg1 = du.try_create_cfg_with_definitions_and_uses(*func1[:3])
-        cfg2 = du.try_create_cfg_with_definitions_and_uses(*func2[:3])
+        cfg1 = du.try_create_cfg_with_definitions_and_uses(func1.func, func1.first_line, func1.argument_names)
+        cfg2 = du.try_create_cfg_with_definitions_and_uses(func2.func, func2.first_line, func2.argument_names)
 
-        pairs = ic.inter_class_def_use_pairs(cfg1, cfg2)
+        pairs = ic.inter_class_def_use_pairs(cfg1.g, cfg2.g)
         self.assertEqual(len(pairs), 1)
 
     def test_def_use_inter_class_2(self):
@@ -43,16 +43,16 @@ class TestInterClass(unittest.TestCase):
         sample_function1 = "clear"
         sample_function2 = "items"
 
-        fns, clss = au.compile_module(multi_dict)
+        fns, clss, _ = au.compile_module(multi_dict)
 
         cls_funcs = clss[sample_class]
 
-        func1 = [f for f in cls_funcs if f[0].__name__ == sample_function1][0]
-        func2 = [f for f in cls_funcs if f[0].__name__ == sample_function2][0]
+        func1 = [f for f in cls_funcs if f.func.__name__ == sample_function1][0]
+        func2 = [f for f in cls_funcs if f.func.__name__ == sample_function2][0]
 
-        cfg1 = du.try_create_cfg_with_definitions_and_uses(*func1[:3])
-        cfg2 = du.try_create_cfg_with_definitions_and_uses(*func2[:3])
+        cfg1 = du.try_create_cfg_with_definitions_and_uses(func1.func, func1.first_line, func1.argument_names)
+        cfg2 = du.try_create_cfg_with_definitions_and_uses(func2.func, func2.first_line, func2.argument_names)
 
-        pairs = ic.inter_class_def_use_pairs(cfg1, cfg2)
+        pairs = ic.inter_class_def_use_pairs(cfg1.g, cfg2.g)
         self.assertEqual(len(pairs), 2)
 

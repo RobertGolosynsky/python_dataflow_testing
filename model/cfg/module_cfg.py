@@ -9,21 +9,21 @@ class ModuleCFG(object):
         self.function_cfgs = {}
         self.class_cfgs = {}
 
-        fns, clss = au.compile_module(module_path)
+        fns, clss, calls = au.compile_module(module_path)
 
         self.definitions = {}
         self.uses = {}
 
         for cls_name, methods in clss.items():
-            cls_cfg = ClassCFG(cls_name, methods)
+            cls_cfg = ClassCFG(cls_name, methods, calls)
             self.class_cfgs[cls_name] = cls_cfg
 
             self.definitions.update(cls_cfg.definitions)
             self.uses.update(cls_cfg.uses)
 
         for f in fns:
-            fn_name = f[0].__name__
-            func_cfg = FunctionCFG.create(*f)
+            fn_name = f.func.__name__
+            func_cfg = FunctionCFG.create(f)
             if func_cfg:
                 self.function_cfgs[fn_name] = func_cfg
                 self.definitions.update(func_cfg.definitions)

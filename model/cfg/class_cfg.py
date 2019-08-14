@@ -1,37 +1,49 @@
+from collections import defaultdict
+from typing import List
+
 import dataflow.inter_class as ic
 from itertools import product
 
 from model.cfg.function_cfg import FunctionCFG
 
+# import graphs.super_cfg as sg
+from util.astroid_util import Function
+
 
 class ClassCFG(object):
 
-    def __init__(self, class_name, methods):
+    def __init__(self, class_name, methods: List[Function], calls):
         self.class_name = class_name
+
+        self.call_dict = defaultdict(list)
+        for line, idx, fname in calls:
+            self.call_dict[line].append((idx, fname))
 
         self.methods = {}
         self.start_line = None
         self.end_line = None
+
         if methods:
-            self.start_line = methods[0][1]
+            self.start_line = methods[0].first_line
             self.end_line = 0
 
         for f in methods:
-            st_line = f[1]
-            end_line = f[3]
-            if st_line < self.start_line:
-                self.start_line = st_line
-            if end_line and self.end_line:
-                if self.end_line < end_line:
-                    self.end_line = end_line
-            if not end_line:
+            if f.first_line < self.start_line:
+                self.start_line = f.first_line
+            if f.end_line and self.end_line:
+                if self.end_line < f.end_line:
+                    self.end_line = f.end_line
+            if not f.end_line:
                 self.end_line = None
-            m_name = f[0].__name__
-            m = FunctionCFG.create(*f)
+            m_name = f.func.__name__
+            m = FunctionCFG.create(f)
             if m:
                 self.methods[m_name] = m
 
-        self.interclass_pairs = []
+        # self.super_cfg = sg.create_super_cfg(self.methods)
+
+        self.interclass_pairs = self._calculate_interclass()
+        self.intermethod_pairs = self._calculate_intermethod()
         self._calculate_interclass()
         self.definitions = {}
         self.uses = {}
@@ -42,11 +54,16 @@ class ClassCFG(object):
     def _calculate_interclass(self):
 
         without_init = {n: o for n, o in self.methods.items() if not n == "__init__"}
-        self.interclass_pairs = []
+        interclass_pairs = []
 
         for (n1, m1), (n2, m2) in product(self.methods.items(), without_init.items()):
-            pairs = ic.inter_class_def_use_pairs(m1.cfg, m2.cfg)
-            self.interclass_pairs.extend(pairs)
+            pairs = ic.inter_class_def_use_pairs(m1.cfg.g, m2.cfg.g)
+            interclass_pairs.extend(pairs)
+
+        return interclass_pairs
+
+    def _calculate_intermethod(self):
+        return []
 
     def get_variables(self, line):
         if line < self.start_line:

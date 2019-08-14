@@ -3,7 +3,7 @@ import unittest
 import pickle
 import networkx as nx
 import inspect
-from graphs.create import _try_create_byte_offset_cfg
+from graphs.create import try_create_cfg
 
 
 def is_isomorphic_with_data(g1, g2):
@@ -58,7 +58,7 @@ class TestGraphsCreate(unittest.TestCase):
 
         def mapper(func):
 
-            return _try_create_byte_offset_cfg(func)
+            return try_create_cfg(func).g
 
         check_against_saved(
             functions[:cutoff],

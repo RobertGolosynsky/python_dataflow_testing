@@ -10,40 +10,102 @@ from control_flow.graph import BB_JUMP_UNCONDITIONAL, FLAG2NAME, \
 import networkx as nx
 from loguru import logger
 
-from collections import namedtuple
-import graphs.util as gu
+from collections import namedtuple, defaultdict
+from typing import Optional
 
-LINE_KEY = "line"
-INSTRUCTION_KEY = "ins"
-FILE_KEY = "file"
+from graphs.keys import DEFINITION_KEY, USE_KEY, LINE_KEY, INSTRUCTION_KEY, CALLS_KEY
 
 FakeBytecodeInstruction = namedtuple("FakeBytecodeInstruction", ["offset", "opname", "argval", "starts_line"])
 
 exit_node_offset = 1
 
 
-def try_create_cfg(func, definition_line=None, args=None):
-    offset_wise_cfg = _try_create_byte_offset_cfg(func, definition_line=definition_line, args=args)
-    if not offset_wise_cfg:
-        return None
-    # if not file_path:
-    #     file_path = inspect.getfile(func)
-    # nx.set_node_attributes(offset_wise_cfg, file_path, name=FILE_KEY)
-    return offset_wise_cfg
+class CFG:
+
+    def __init__(self, g, entry_label, exit_label):
+        self.g = g
+        self.entry_label = entry_label
+        self.exit_label = exit_label
+
+    def extended(self, possible_callees: dict, canvas=None, included_cfgs=None):
+        if not canvas:
+            canvas = self.copy()
+        if not included_cfgs:
+            included_cfgs = set()  # a set of functions that are already on the canvas
+
+        # for every node in parent cfg
+        for node, data in self.g.nodes(data=True):
+
+            callee_name = data.get(CALLS_KEY)
+            # if there is a call to other function at node
+            if callee_name:
+
+                # and we have not yet added that cfg
+                if callee_name not in included_cfgs:
+                    callee_cfg = possible_callees.get(callee_name)
+                    # if there is a cfg for the target function
+                    if callee_cfg:
+                        # add it so we don't process this function again if it is called elsewhere
+                        included_cfgs.add(callee_name)
+                        # extend the callee calls recursively
+                        # those functions that where already added
+                        # will not be added again
+                        callee_cfg_extended = callee_cfg.extended(possible_callees,
+                                                                  canvas=canvas,
+                                                                  included_cfgs=included_cfgs)
+
+                        # insert the callee at the caller call site
+                        canvas.insert_graph_at_node(node, callee_cfg_extended)
+                else:
+                    # we found a repeating call
+                    # this function is already on the canvas graph
+                    # just need to hook it up
+
+                    # this is only required to figure out the entry and exit labels of the callee
+                    callee_cfg = possible_callees.get(callee_name)
+
+                    canvas.hook_up_call_site(node, callee_cfg.entry_label, callee_cfg.exit_label)
+
+        return canvas
+
+    def hook_up_call_site(self, node, sub_graph_entry, sub_graph_exit):
+
+        parents = self.g.predecessors(node)
+        children = self.g.successors(node)
+
+        self.g.remove_node(node)
+
+        # hook it up
+        for parent in parents:
+            self.g.add_edge(parent, sub_graph_entry)
+
+        for child in children:
+            self.g.add_edge(sub_graph_exit, child)
+
+    def insert_graph_at_node(self, node, sub_graph):
+        self.g = nx.compose(self.g, sub_graph.g)
+        self.hook_up_call_site(node, sub_graph.entry_label, sub_graph.exit_label)
+
+    def collect_definitions_and_uses(self, filter_self=True):
+        definitions = defaultdict(list)
+        uses = defaultdict(list)
+        for node, node_attrs in self.g.nodes(data=True):
+            use = node_attrs.get(USE_KEY, None)
+            definition = node_attrs.get(DEFINITION_KEY, None)
+            line = node_attrs.get(LINE_KEY, -1)
+            if line > -1:
+                if definition:
+                    definitions[line].append(definition)
+                if use:
+                    uses[line].append(use)
+        return definitions, uses
+
+    def copy(self):
+
+        return CFG(self.g.copy(), self.entry_label, self.exit_label)
 
 
-def _get_instructions(func, definition_line=None):
-    instrs = []
-    for ins in get_instructions(func, first_line=None):
-        argval = None
-        if isinstance(ins.argval, str) or isinstance(ins.argval, int):
-            argval = ins.argval
-        fake = FakeBytecodeInstruction(ins.offset, ins.opname, argval, ins.starts_line)
-        instrs.append(fake)
-    return instrs
-
-
-def _try_create_byte_offset_cfg(func, definition_line=None, args=None):
+def try_create_cfg(func, definition_line=None, args=None) -> Optional[CFG]:
     try:
         bb_mgr = basic_blocks(PYTHON_VERSION, IS_PYPY, func)
         cfg = ControlFlowGraph(bb_mgr)
@@ -160,10 +222,10 @@ def _try_create_byte_offset_cfg(func, definition_line=None, args=None):
                        color=colors[hash(edge.kind) % len(colors)],
                        weight=10000
                        )
-
+    entry_node_label = 0
     if len(fake_instructions) > 0:
         fake_instructions = list(sorted(fake_instructions, key=lambda i: i.offset))
-
+        entry_node_label = fake_instructions[0].offset
         for i1, i2 in zip(fake_instructions, fake_instructions[1:]):
             g.add_edge(i1.offset, i2.offset)
 
@@ -171,8 +233,17 @@ def _try_create_byte_offset_cfg(func, definition_line=None, args=None):
         first_real_instruction_offset = 0
 
         g.add_edge(last_fake_instruction_offset, first_real_instruction_offset)
-    nx.relabel_nodes(g, mapping={l: str(l) for l in g.nodes()}, copy=False)
-    return g
+
+    exit_node_label = 1
+    function_name = func.__name__
+
+    def rename_node(node):
+        return function_name + "@" + str(node)
+
+    mapping = {node: rename_node(node) for node in g.nodes()}
+    nx.relabel_nodes(g, mapping=mapping, copy=False)
+
+    return CFG(g, rename_node(entry_node_label), rename_node(exit_node_label))
 
 
 def _try_fake_instructions_function_arguments(func, definition_line=None, args=None):
@@ -213,28 +284,12 @@ def _try_fake_instructions_function_arguments(func, definition_line=None, args=N
     return instructions
 
 
-def _add_entry_and_exit_nodes(g, entry_label, exit_label):
-    # exit already added, but not for try blocks and other hanging code
-    entry_nodes = gu.nodes_with_in_degree(g, 0)
-    # gd.draw_line_cfg(g)
-    # assert len(entry_nodes) == 1
-
-    entry_node = entry_nodes[0]
-
-    exit_nodes = gu.nodes_with_out_degree(g, 0)
-
-    for exit_node in exit_nodes:
-        if not exit_node == exit_label:
-            g.add_edge(exit_node, exit_label)
-
-    g.add_edge(entry_label, entry_node)
-
-    return g
-
-
-def _line_for_node(g, node):
-    return g.nodes[node][LINE_KEY] if LINE_KEY in g.nodes[node] else None
-
-
-def _ins_for_node(g, node):
-    return g.nodes[node][INSTRUCTION_KEY] if INSTRUCTION_KEY in g.nodes[node] else None
+def _get_instructions(func, definition_line=None):
+    instrs = []
+    for ins in get_instructions(func, first_line=None):
+        argval = None
+        if isinstance(ins.argval, str) or isinstance(ins.argval, int):
+            argval = ins.argval
+        fake = FakeBytecodeInstruction(ins.offset, ins.opname, argval, ins.starts_line)
+        instrs.append(fake)
+    return instrs
