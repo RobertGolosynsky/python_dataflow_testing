@@ -1,0 +1,9 @@
+1. STORE_SUBSCR : definition "some_dict" not found if some_dict["some_key"] = some_value
+2. try except - can create cfg when return from try block
+3. MAIN ISSUE:
+
+Dynamically importing modules to get access to code objects inside is unmanageable:
+importlib uses standard python strategies for module import,
+this means that if a module is already in sys.modules this version is used.
+Removing (unloading) a module is impossible due to some issues that are outside of python.
+http://web.archive.org/web/20080926094551/http://mail.python.org/pipermail/python-list/2003-December/241654.html
