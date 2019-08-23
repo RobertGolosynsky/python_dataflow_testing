@@ -6,6 +6,7 @@ import dataflow.reaching_definitions as rd
 import dataflow.def_use as du
 from itertools import filterfalse
 import util.misc as um
+from graphs.create import CFG
 
 
 class TestDefinitionUsePairs(unittest.TestCase):
@@ -13,8 +14,8 @@ class TestDefinitionUsePairs(unittest.TestCase):
     def test_def_use_pairs(self):
         sample_function = nx.max_weight_matching
 
-        cfg: nx.DiGraph = du.try_create_cfg_with_definitions_and_uses(sample_function)
-        pairs = rd.definition_use_pairs(cfg)
+        cfg: CFG = du.try_create_cfg_with_definitions_and_uses(sample_function)
+        pairs = rd.definition_use_pairs(cfg.g)
 
         # for b in um.grouper_it(7, pairs):
         #     print(", ".join([str((p.definition.line, p.use.line)) for p in b])+", ")

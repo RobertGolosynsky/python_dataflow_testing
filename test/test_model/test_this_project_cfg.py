@@ -19,7 +19,7 @@ class TestThisProjectCFG(unittest.TestCase):
 
     def test_astroid_util_definitions_uses(self):
         project_cfg = ProjectCFG.create(PROJECT, use_cached_if_possible=True)
-        line = 7
+        line = 16
         defs, uses = project_cfg.get_variables(ASTROID_UTIL, line)
         self.assertIn("line", defs)
         self.assertIn("function_def", uses)

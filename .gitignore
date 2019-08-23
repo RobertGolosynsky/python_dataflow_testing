@@ -139,3 +139,5 @@ cpp/du_pairs/cmake-build-debug/
 expected_cfgs/
 
 expected_def_use/
+
+cpp/du_pairs/\.rendered\.def_use_pairs_ext\.cpp

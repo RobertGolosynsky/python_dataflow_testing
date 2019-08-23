@@ -1,3 +1,5 @@
+from pprint import pprint
+
 from cpp.cpp_import import load_cpp_extension
 from model.cfg.project_cfg import read_du_index
 from tracing.trace_reader import read_files_index

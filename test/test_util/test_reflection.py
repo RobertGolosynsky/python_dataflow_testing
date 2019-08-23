@@ -18,10 +18,10 @@ class TestReflection(unittest.TestCase):
         project.add_to_path()
         multidict_path = [p for p in module_paths if m_file in p][0]
 
-        fns, clss = au.compile_module(multidict_path)
+        fns, clss, _ = au.compile_module(multidict_path)
         self.assertIn(cls_name, clss.keys())
         methods = clss[cls_name]
-        m_names = [m[0].__name__ for m in methods]
+        m_names = [m.func.__name__ for m in methods]
 
         self.assertIn("__init__", m_names)
         self.assertIn("items", m_names)

@@ -6,45 +6,38 @@ import graphs.create as cr
 
 from loguru import logger
 
+from util.astroid_util import Function
+
 
 class FunctionCFG:
     def __init__(self, cfg, pairs, line_start, line_end, filter_self=True):
         self.cfg = cfg
+        self.extended_cfg = None
         self.pairs = pairs
         self.line_start = line_start
         self.line_end = line_end
-        definitions, uses = self._collect_definitions_and_uses(filter_self=filter_self)
+        definitions, uses = self.cfg.collect_definitions_and_uses(filter_self=filter_self)
         self.definitions = definitions
         self.uses = uses
 
-    @classmethod
-    def create(cls, method_object, definition_line=None, args=None, line_end=None, filter_self=True):
+    @staticmethod
+    def create(function: Function, calls=None, filter_self=True):
         cfg = du.try_create_cfg_with_definitions_and_uses(
-            method_object,
-            definition_line=definition_line,
-            args=args
+            function.func,
+            definition_line=function.first_line,
+            args=function.argument_names
         )
         if not cfg:
-            logger.warning("Could not create cfg for function {f}", f=method_object.__name__)
+            logger.warning("Could not create cfg for function {f}", f=function.func.__name__)
             return None
-
-        pairs = rd.definition_use_pairs(cfg)
-        m = FunctionCFG(cfg, pairs, definition_line, line_end, filter_self=filter_self)
+        if calls:
+            cfg.expose_call_sites(calls)
+        pairs = rd.definition_use_pairs(cfg.g)
+        m = FunctionCFG(cfg, pairs, function.first_line, function.end_line, filter_self=filter_self)
         return m
 
-    def _collect_definitions_and_uses(self, filter_self=True):
-        definitions = defaultdict(list)
-        uses = defaultdict(list)
-        for node, node_attrs in self.cfg.nodes(data=True):
-            use = node_attrs.get(du.USE_KEY, None)
-            definition = node_attrs.get(du.DEFINITION_KEY, None)
-            line = node_attrs.get(cr.LINE_KEY, -1)
-            if line > -1:
-                if definition:
-                    definitions[line].append(definition)
-                if use:
-                    uses[line].append(use)
-        return definitions, uses
+    def extend_cfg(self, simple_method_cfgs):
+        self.extended_cfg = self.cfg.extended(simple_method_cfgs)
 
     def get_variables(self, line):
         if line < self.line_start:

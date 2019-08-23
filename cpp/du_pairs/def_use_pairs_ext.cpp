@@ -283,7 +283,7 @@ std::vector<std::vector<Row *>> findDefUsePairs(std::vector<Row *> rows) {
 //            std::vector<ReachIn *> reachIns = row->getReachIns();
 
             for (auto use : *uses) {
-                for (auto reachIn : reachIns) {
+                for (auto reachIn : reachInCopy) {
                     if (use == reachIn->getVarName()) {
                         auto pair = new DUPair(row->getIdx(), row->getLine(), reachIn->getIdx(),
                                                reachIn->getLine(), reachIn->getVarName());

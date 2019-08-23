@@ -11,6 +11,7 @@ import networkx as nx
 
 from graphs import create as gc
 import graphs.util as gu
+from graphs.keys import REMOVED_KEY, CALL_KEY, RETURN_KEY
 
 
 def draw_byte_cfg(g):
@@ -104,8 +105,32 @@ def draw_byte_cfg_dot(g, pairs, func,
             new_label = "%i: %s %s @ %i: %s" % (inst.offset, inst.opname, str(inst.argval), line, code_line)
             mapping[node] = new_label
 
-    cfg = nx.relabel_nodes(cfg, mapping)
+    # cfg = nx.relabel_nodes(cfg, mapping)
+    cfg = nx.relabel_nodes(cfg, {node: node + ":" +
+                                       cfg.nodes[node].get(gc.INSTRUCTION_KEY, None).opname + " " +
+                                       str(cfg.nodes[node].get(gc.INSTRUCTION_KEY, None).argval)
+    if gc.INSTRUCTION_KEY in cfg.nodes[node] else node + ":" + "None"
+                                 for node in cfg})
+
+    for fr, to, data in cfg.edges(data=True):
+        if data.get(REMOVED_KEY):
+            data["color"] = None
+        if CALL_KEY in data:
+            data["color"] = "blue"
+            data["label"] = "Call to "+data[CALL_KEY]
+
+        if RETURN_KEY in data:
+            data["color"] = "red"
+            data["label"] = "Return from "+data[RETURN_KEY]
+
     dot = nx.nx_agraph.to_agraph(cfg)
+    clusters = defaultdict(list)
+    for node in cfg.nodes:
+        function_name = node.split("@")[0]
+        clusters[function_name].append(node)
+    for cluster in clusters:
+        dot.add_subgraph(clusters[cluster], name="cluster_" + cluster, label="method " + cluster, bgcolor=Color.next())
+
     if file:
         dot.draw(file, prog='dot')
     else:
@@ -178,3 +203,18 @@ def source_w_pairs(source_file, pairs, trace=[]):
         else:
             marker = "   "
         print(line_num, marker, l[:-1].split("#")[0], s)
+
+
+class Color:
+    colors = ['#C1D989', '#E9F4CE', '#DDF0B2', '#A5C262', '#87A73B', '#6BA980', '#AECEB9', '#8BBB9B', '#4C9765',
+              '#2E824B', '#E79F92', '#FFDDD7', '#FFC8BE', '#CE7868', '#B2513F', '#B4729C', '#D7B5CA', '#C794B4',
+              '#A15183', '#8B316A']
+    c = 0
+
+    @classmethod
+    def next(cls):
+        color = cls.colors[cls.c]
+        cls.c += 5
+        if cls.c >= len(cls.colors):
+            cls.c = cls.c % 5 + 1
+        return color
