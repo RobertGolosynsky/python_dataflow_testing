@@ -21,14 +21,14 @@ cpp_find_pairs = cpp_def_use.findPairsIndex
 
 class TestTraceAnalyzer(unittest.TestCase):
 
-    def test_inter_method_pairs(self):
+    def test_intra_method_pairs(self):
         test_cases = ["test_append_when_empty",
                       "test_append_when_not_empty",
                       "test_len",
                       "test_get",
                       "test_get_empty",
                       "test_get_out_bounds"]
-        len_pairs = [10, 15, 10, 10, 5, 16]
+        len_pairs = [10, 15, 14, 10, 5, 18]
         project_root = LINKED_LIST_ROOT
         trace_root = create_new_temp_dir()
         exclude_folders = ["venv"]
@@ -51,23 +51,6 @@ class TestTraceAnalyzer(unittest.TestCase):
 
             idx_pairs = rename_vars(idx_pairs)
             return idx_pairs
-
         for test_case, count in zip(test_cases, len_pairs):
             pairs = get_pairs(test_case)
             self.assertEqual(count, len(pairs), "Pairs count don't match for test case: {}".format(test_case))
-
-    def test_cpp_var_index(self):
-        trace_root = create_new_temp_dir()
-        trace_file_path = trace_this(compile_module, args=[__file__],
-                                     trace_root=trace_root, project_root=PROJECT_ROOT)
-
-        cppvi = VarIndexFactory.new_cpp_index(PROJECT_ROOT, trace_root)
-
-        idx_pairs = analyze_trace_w_index(trace_file_path, cppvi)
-
-        def rename_vars(s):
-            return {(el[0], el[1]) for el in s}
-
-        idx_pairs = rename_vars(idx_pairs)
-
-        print(len(idx_pairs))
