@@ -2,6 +2,11 @@ from tracing.index_factory import VarIndex
 from tracing.trace_reader import read_df
 from graphs.draw import source_w_pairs
 
+IDX_INDEX = 0
+FILE_INDEX = 1
+LINE_INDEX = 2
+SELF_INDEX = 3
+SCOPE_INDEX = 4
 
 def analyze(trace_path, index: VarIndex, scopes_ends):
     df, size_mb = read_df(trace_path)
@@ -14,12 +19,12 @@ def analyze(trace_path, index: VarIndex, scopes_ends):
         # join reachins to pairs
         for def_idx, def_var_name in reach_in:
             that_row = df[def_idx]
-            that_scope = that_row[4]
-            if that_scope != this_row[4]:
+            that_scope = that_row[SCOPE_INDEX]
+            if that_scope != this_row[SCOPE_INDEX]:
                 if def_var_name in this_us:
-                    this_row_idx = this_row[0]
+                    this_row_idx = this_row[IDX_INDEX]
                     that_scope_end = scopes_ends[that_scope]
-                    du_pair = (that_row[2], this_row[2])
+                    du_pair = (that_row[LINE_INDEX], this_row[LINE_INDEX])
                     if that_scope_end > this_row_idx:
                         intermethod_pairs.append(du_pair)
                     else:

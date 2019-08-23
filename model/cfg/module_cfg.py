@@ -29,6 +29,31 @@ class ModuleCFG(object):
                 self.definitions.update(func_cfg.definitions)
                 self.uses.update(func_cfg.uses)
 
+        self.intramethod_pairs = self._calculate_intra_method()
+        self.intermethod_pairs = self._calculate_intermethod()
+        self.interclass_pairs = self._calculate_interclass()
+
+    def _calculate_interclass(self):
+        interclass_pairs = []
+        for name, cls_cfg in self.class_cfgs.items():
+            interclass_pairs.extend(cls_cfg.interclass_pairs)
+        return interclass_pairs
+
+    def _calculate_intermethod(self):
+        total_intermethod_pairs = []
+
+        for name, cls_cfg in self.class_cfgs.items():
+            total_intermethod_pairs.extend(cls_cfg.intermethod_pairs)
+        return total_intermethod_pairs
+
+    def _calculate_intra_method(self):
+        total_intramethod_pairs = []
+        for name, cls_cfg in self.class_cfgs.items():
+            total_intramethod_pairs.extend(cls_cfg.intramethod_pairs)
+        for name, function_cfg in self.function_cfgs.items():
+            total_intramethod_pairs.extend(function_cfg.pairs)
+        return total_intramethod_pairs
+
     def get_variables(self, line):
 
         for func_cfg in self.function_cfgs:

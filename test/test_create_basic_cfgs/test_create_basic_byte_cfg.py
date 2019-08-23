@@ -45,7 +45,7 @@ class TestCreateByteCFG(unittest.TestCase):
             if not cfg:
                 print("cant create cfg", function.func)
                 continue
-        self.assertEqual(len(fns), 12)
+        self.assertEqual(len(fns), 13)
         self.assertEqual(len(clss), 1)
             # file_name = f[0].__name__
             # img_file = Path("astroid_cfgs") / (file_name + "_byte.png")

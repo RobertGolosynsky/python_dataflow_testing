@@ -1,4 +1,5 @@
 import inspect
+import operator
 
 from xdis.std import get_instructions, Instruction
 from xdis import PYTHON_VERSION, IS_PYPY
@@ -9,11 +10,12 @@ from control_flow.graph import BB_JUMP_UNCONDITIONAL, FLAG2NAME, \
 
 import networkx as nx
 from loguru import logger
-
+from itertools import chain
 from collections import namedtuple, defaultdict
 from typing import Optional
 
-from graphs.keys import DEFINITION_KEY, USE_KEY, LINE_KEY, INSTRUCTION_KEY, CALLS_KEY
+from graphs.keys import DEFINITION_KEY, USE_KEY, LINE_KEY, INSTRUCTION_KEY, CALLS_KEY, FUNCTION_KEY, REMOVED_KEY, \
+    CALL_KEY, RETURN_KEY
 
 FakeBytecodeInstruction = namedtuple("FakeBytecodeInstruction", ["offset", "opname", "argval", "starts_line"])
 
@@ -27,63 +29,76 @@ class CFG:
         self.entry_label = entry_label
         self.exit_label = exit_label
 
-    def extended(self, possible_callees: dict, canvas=None, included_cfgs=None):
-        if not canvas:
-            canvas = self.copy()
-        if not included_cfgs:
-            included_cfgs = set()  # a set of functions that are already on the canvas
+    def extended(self, possible_callees: dict):
+        # if not canvas:
+        extended = self.copy()
+        # else:
+        #     canvas.g = nx.compose(canvas.g, self.g)
+        # if not included_cfgs:
+        included_cfgs = set()  # a set of functions that are already on the canvas
+        # if not resolved_call_nodes:
+        resolved_call_nodes = set()
 
         # for every node in parent cfg
-        for node, data in self.g.nodes(data=True):
+        working_list = list(self.g.nodes())
 
+        while working_list:
+            node = working_list.pop()
+            data = extended.g.nodes[node]
             callee_name = data.get(CALLS_KEY)
-            # if there is a call to other function at node
-            if callee_name:
-
+            # if there is a call to other method at node
+            if callee_name and callee_name.startswith("self."):
+                pure_callee_name = callee_name[5:]
                 # and we have not yet added that cfg
-                if callee_name not in included_cfgs:
-                    callee_cfg = possible_callees.get(callee_name)
+                if pure_callee_name not in included_cfgs:
+
+                    callee_cfg = possible_callees.get(pure_callee_name)
                     # if there is a cfg for the target function
                     if callee_cfg:
                         # add it so we don't process this function again if it is called elsewhere
-                        included_cfgs.add(callee_name)
-                        # extend the callee calls recursively
-                        # those functions that where already added
-                        # will not be added again
-                        callee_cfg_extended = callee_cfg.extended(possible_callees,
-                                                                  canvas=canvas,
-                                                                  included_cfgs=included_cfgs)
+                        included_cfgs.add(pure_callee_name)
 
                         # insert the callee at the caller call site
-                        canvas.insert_graph_at_node(node, callee_cfg_extended)
+                        extended.insert_graph_at_node(node, callee_cfg)
+                        resolved_call_nodes.add(node)
+                        # extend the callee calls
+                        working_list.extend(callee_cfg.g.nodes())
                 else:
                     # we found a repeating call
                     # this function is already on the canvas graph
                     # just need to hook it up
-
+                    resolved_call_nodes.add(node)
                     # this is only required to figure out the entry and exit labels of the callee
-                    callee_cfg = possible_callees.get(callee_name)
-
-                    canvas.hook_up_call_site(node, callee_cfg.entry_label, callee_cfg.exit_label)
-
-        return canvas
+                    callee_cfg = possible_callees.get(pure_callee_name)
+                    extended.hook_up_call_site(node, callee_cfg.entry_label, callee_cfg.exit_label)
+        g: nx.DiGraph = extended.g
+        # g.remove_nodes_from(resolved_call_nodes)
+        return extended
 
     def hook_up_call_site(self, node, sub_graph_entry, sub_graph_exit):
 
-        parents = self.g.predecessors(node)
-        children = self.g.successors(node)
+        children = list(self.g.successors(node))
 
-        self.g.remove_node(node)
+        callee_name = self.g.nodes[sub_graph_entry][FUNCTION_KEY]
+        caller_name = self.g.nodes[node][FUNCTION_KEY]
 
-        # hook it up
-        for parent in parents:
-            self.g.add_edge(parent, sub_graph_entry)
+        for edge_to_remove in self.g.out_edges(node, keys=True):
+            node_from, node_to, _ = edge_to_remove
+            if node_to.startswith(caller_name):
+                self.g.edges[edge_to_remove][REMOVED_KEY] = True  # we keep the edge only for display purposes
+
+        # self.g.add_edge(node, sub_graph_entry, label="Call to " + callee_name, color="blue")
+        self.g.add_edge(node, sub_graph_entry, **{CALL_KEY: callee_name})
 
         for child in children:
-            self.g.add_edge(sub_graph_exit, child)
+            if child.startswith(caller_name):
+                self.g.add_edge(sub_graph_exit, child, **{RETURN_KEY: caller_name})
 
     def insert_graph_at_node(self, node, sub_graph):
+        # print("graph", self.g.nodes())
+        # print("sub_graph", sub_graph.g.nodes())
         self.g = nx.compose(self.g, sub_graph.g)
+        # self.g.remove_node(node)
         self.hook_up_call_site(node, sub_graph.entry_label, sub_graph.exit_label)
 
     def collect_definitions_and_uses(self, filter_self=True):
@@ -100,8 +115,32 @@ class CFG:
                     uses[line].append(use)
         return definitions, uses
 
-    def copy(self):
+    def expose_call_sites(self, calls):
+        call_dict = defaultdict(list)
+        for line, idx, fname in calls:
+            call_dict[line].append((idx, fname))
 
+        # sort calls for line by call number (larger first)
+        for line_num in call_dict:
+            call_dict[line_num] = list(sorted(call_dict[line_num], key=operator.itemgetter(0)))
+
+        for node, data in self.g.nodes(data=True):
+            line = data.get(LINE_KEY)
+            if line:
+                inst = data.get(INSTRUCTION_KEY)
+                if inst:
+                    opname = inst.opname
+                    if opname.startswith("CALL_"):
+                        calls_on_line = call_dict.get(line)
+                        if calls_on_line:
+                            if len(calls_on_line) == 1:
+                                _, fname = calls_on_line.pop()
+                                data[CALLS_KEY] = fname
+                            else:
+                                _, fname = calls_on_line.pop()
+                                data[CALLS_KEY] = fname
+
+    def copy(self):
         return CFG(self.g.copy(), self.entry_label, self.exit_label)
 
 
@@ -242,6 +281,7 @@ def try_create_cfg(func, definition_line=None, args=None) -> Optional[CFG]:
 
     mapping = {node: rename_node(node) for node in g.nodes()}
     nx.relabel_nodes(g, mapping=mapping, copy=False)
+    nx.set_node_attributes(g, function_name, FUNCTION_KEY)
 
     return CFG(g, rename_node(entry_node_label), rename_node(exit_node_label))
 

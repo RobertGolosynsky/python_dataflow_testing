@@ -12,6 +12,7 @@ from util.astroid_util import Function
 class FunctionCFG:
     def __init__(self, cfg, pairs, line_start, line_end, filter_self=True):
         self.cfg = cfg
+        self.extended_cfg = None
         self.pairs = pairs
         self.line_start = line_start
         self.line_end = line_end
@@ -20,7 +21,7 @@ class FunctionCFG:
         self.uses = uses
 
     @staticmethod
-    def create(function: Function, filter_self=True):
+    def create(function: Function, calls=None, filter_self=True):
         cfg = du.try_create_cfg_with_definitions_and_uses(
             function.func,
             definition_line=function.first_line,
@@ -29,10 +30,14 @@ class FunctionCFG:
         if not cfg:
             logger.warning("Could not create cfg for function {f}", f=function.func.__name__)
             return None
-
+        if calls:
+            cfg.expose_call_sites(calls)
         pairs = rd.definition_use_pairs(cfg.g)
         m = FunctionCFG(cfg, pairs, function.first_line, function.end_line, filter_self=filter_self)
         return m
+
+    def extend_cfg(self, simple_method_cfgs):
+        self.extended_cfg = self.cfg.extended(simple_method_cfgs)
 
     def get_variables(self, line):
         if line < self.line_start:

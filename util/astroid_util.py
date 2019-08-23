@@ -79,6 +79,13 @@ def base_class_names(class_):
             yield base_class.name
 
 
+def find_class_with_name(name, module):
+    for cls in classes_of(module):
+        if cls.name == name:
+            return cls
+    return None
+
+
 def classes_with_base_class(module, base_class):
     return [class_ for class_ in classes_of(module) if base_class in base_class_names(class_)]
 
