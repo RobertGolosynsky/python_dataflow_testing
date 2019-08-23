@@ -3,66 +3,202 @@ from collections import defaultdict
 import networkx as nx
 
 import dataflow.def_use as du
-import graphs.create as cr
+from pprint import pformat
 from collections import namedtuple
 
-Var = namedtuple("VariableDefinition", ["file", "line", "varname"])
-Pair = namedtuple("DefinitionUsePair", ["definition", "use"])
+from graphs.keys import FILE_KEY, LINE_KEY, FUNCTION_KEY, REMOVED_KEY, CALL_KEY, RETURN_KEY
 
 
-def definition_use_pairs(cfg: nx.DiGraph, initial_set=None):
+class Var:
+    def __init__(self, line, varname, depth=0, flow_mark=None,
+                 flow_mark_log=None, passed_through_return_or_call=False):
+
+        self.line = line
+        self.varname = varname
+        self.depth = depth
+        self.passed_through_return_or_call = passed_through_return_or_call
+        if flow_mark_log is None:
+            self.flow_mark_log = []
+        else:
+            self.flow_mark_log = flow_mark_log
+        if flow_mark is None:
+            self.flow_mark = []
+        else:
+            self.flow_mark = flow_mark
+
+    def can_return_to(self, function_name):
+        return not self.flow_mark or self.flow_mark[-1] == function_name
+
+    def __hash__(self):
+        return hash(self.line) + hash(self.varname)
+
+    def __eq__(self, other):
+        return self.line == other.line and self.varname == other.varname
+
+    def __repr__(self):
+        return pformat(vars(self))
+
+    def copy(self):
+        return Var(line=self.line, varname=self.varname, depth=self.depth, flow_mark=self.flow_mark.copy(),
+                   flow_mark_log=self.flow_mark_log.copy(),
+                   passed_through_return_or_call=self.passed_through_return_or_call
+                   )
+
+
+# Var = namedtuple("Var", ["line", "varname"])
+Pair = namedtuple("Pair", ["definition", "use"])
+
+
+def definition_use_pairs(cfg: nx.DiGraph,
+                         initial_set=None,
+                         intermethod_only=False,
+                         object_vars_only=False):
     pairs = []
-    reaching_deffs = _reaching_definitions(cfg, initial_set=initial_set)
+    reaching_deffs = _reaching_definitions(cfg,
+                                           initial_set=initial_set,
+                                           object_vars_only=object_vars_only)
+
+    # for node in sorted(reaching_deffs):
+    #     print("node:",node," -> "," ".join(str(var) for var in reaching_deffs[node]))
     for node in cfg.nodes():
         node_attrs = cfg.nodes[node]
         use = node_attrs.get(du.USE_KEY, None)
-        use_file = node_attrs.get(cr.FILE_KEY, "UNDEFINED")
-        use_line = node_attrs.get(cr.LINE_KEY, -1)
+        use_line = node_attrs.get(LINE_KEY, -1)
 
         if use:
             reach_in = reaching_deffs[node]
             for reaching_var in reach_in:
                 if use == reaching_var.varname:
-                    pair = Pair(
-                        reaching_var,
-                        Var(use_file, use_line, use)
-                    )
-                    pairs.append(pair)
+                    if not intermethod_only or reaching_var.passed_through_return_or_call:
+                        pair = Pair(
+                            reaching_var,
+                            Var(use_line, use)
+                        )
+                        pairs.append(pair)
     return pairs
 
 
-def _reaching_definitions(cfg: nx.DiGraph, initial_set=None):
+def edge_removed(data):
+    return data.get(REMOVED_KEY, False)
+
+
+def is_call_edge(data):
+    return CALL_KEY in data
+
+
+def is_return_edge(data):
+    return RETURN_KEY in data
+
+
+def _reaching_definitions(cfg: nx.DiGraph, initial_set=None, object_vars_only=False):
     reach_out = defaultdict(set)
     working_list = set(cfg.nodes())
     while len(working_list) > 0:
         a_node = working_list.pop()
-        # print(a_node)
+        node_attrs: dict = cfg.nodes[a_node]
+
         old_val = reach_out[a_node]
-        # print("before ", old_val)
+
         node_reach_in = set()
+
         if initial_set:
             node_reach_in = initial_set.get(a_node, set())
-        for a_pred in cfg.predecessors(a_node):
-            node_reach_in.update(reach_out[a_pred])
+
+        for source, dest, edge_data in cfg.in_edges(a_node, data=True):
+            # print(edge)
+            # source, _, _ = edge
+
+            if not edge_removed(edge_data):
+                if is_call_edge(edge_data):
+                    caller_function = cfg.nodes[source][FUNCTION_KEY]
+                    callee_function = cfg.nodes[a_node][FUNCTION_KEY]
+                    # print(source, dest, edge_data)add(var)
+                    # mark variables as coming from function 'x'
+                    variables = {var.copy() for var in reach_out[source]}
+
+                    for var in variables:
+                        var.flow_mark.append(caller_function)
+                        var.flow_mark_log.append(caller_function + " calls " + callee_function)
+                        var.passed_through_return_or_call = True
+                        node_reach_in.add(var)
+                    pass
+
+                elif is_return_edge(edge_data):
+                    # add only variables that are marked to have come from the function
+                    return_from_function = cfg.nodes[source][FUNCTION_KEY]
+                    return_to_function = cfg.nodes[a_node][FUNCTION_KEY]
+
+                    variables = {var.copy() for var in reach_out[source] if var.can_return_to(return_to_function)}
+                    for var in variables:
+                        var.flow_mark_log.append(return_from_function + " returns " + return_to_function)
+
+                        if var.flow_mark:
+                            var.flow_mark.pop()
+                        var.passed_through_return_or_call = True
+                        node_reach_in.add(var)
+                    pass
+
+                else:
+                    node_reach_in.update({var.copy() for var in reach_out[source]})
 
         node_reach_out = set()
-        node_attrs: dict = cfg.nodes[a_node]
+
         node_definition = node_attrs.get(du.DEFINITION_KEY, None)
-        node_file = node_attrs.get(du.FILE_KEY, "UNDEFINED")
-        node_line = node_attrs.get(cr.LINE_KEY, -1)
+        node_line = node_attrs.get(LINE_KEY, -1)
         if node_definition:
             for reaching_var in node_reach_in:
                 if not reaching_var.varname == node_definition:
                     node_reach_out.add(reaching_var)
             if not initial_set:
-                defined_var = Var(node_file, node_line, node_definition)
-                node_reach_out.add(defined_var)
+                if not object_vars_only or node_definition.startswith("self."):
+                    defined_var = Var(node_line, node_definition)
+                    node_reach_out.add(defined_var)
         else:
             node_reach_out = node_reach_in
 
         reach_out[a_node] = node_reach_out
         # print("after ", node_reach_out)
+        # print(node_reach_out, old_val)
+        # print("node:", a_node, " -> ", " ".join(str(var) for var in node_reach_out))
+
         if not node_reach_out == old_val:
             working_list.update(cfg.successors(a_node))
 
     return reach_out
+
+#
+# def _reaching_definitions(cfg: nx.DiGraph, initial_set=None):
+#     reach_out = defaultdict(set)
+#     working_list = set(cfg.nodes())
+#     while len(working_list) > 0:
+#         a_node = working_list.pop()
+#         print(a_node)
+#         old_val = reach_out[a_node]
+#         print("before ", old_val)
+#         node_reach_in = set()
+#         if initial_set:
+#             node_reach_in = initial_set.get(a_node, set())
+#         for a_pred in cfg.predecessors(a_node):
+#             node_reach_in.update(reach_out[a_pred])
+#
+#         node_reach_out = set()
+#         node_attrs: dict = cfg.nodes[a_node]
+#         node_definition = node_attrs.get(du.DEFINITION_KEY, None)
+#         node_file = node_attrs.get(FILE_KEY, "UNDEFINED")
+#         node_line = node_attrs.get(LINE_KEY, -1)
+#         if node_definition:
+#             for reaching_var in node_reach_in:
+#                 if not reaching_var.varname == node_definition:
+#                     node_reach_out.add(reaching_var)
+#             if not initial_set:
+#                 defined_var = Var(node_file, node_line, node_definition)
+#                 node_reach_out.add(defined_var)
+#         else:
+#             node_reach_out = node_reach_in
+#
+#         reach_out[a_node] = node_reach_out
+#         print("after ", node_reach_out)
+#         if not node_reach_out == old_val:
+#             working_list.update(cfg.successors(a_node))
+#
+#     return reach_out

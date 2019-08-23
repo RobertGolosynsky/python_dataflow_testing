@@ -3,10 +3,7 @@ import unittest
 import pickle
 import networkx as nx
 import inspect
-from graphs.create import _try_create_byte_offset_cfg
-
-import dataflow.def_use as du
-from util import reflection
+from graphs.create import try_create_cfg
 
 
 def is_isomorphic_with_data(g1, g2):
@@ -29,7 +26,6 @@ def check_against_saved(to_map, map_function, check, names, prefix, save = False
                 processed = map_function(item)
 
                 pickle.dump(processed, f)
-                print(f)
 
         with open(os.path.join(prefix, name), "rb") as f:
             expected_obj = pickle.load(f)
@@ -62,7 +58,7 @@ class TestGraphsCreate(unittest.TestCase):
 
         def mapper(func):
 
-            return _try_create_byte_offset_cfg(func)
+            return try_create_cfg(func).g
 
         check_against_saved(
             functions[:cutoff],

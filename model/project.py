@@ -3,7 +3,7 @@ import subprocess
 import sys
 import urllib.request
 import venv
-
+import pathlib
 import astroid
 
 import util.astroid_util as au
@@ -21,7 +21,7 @@ class Project(object):
 
     def __init__(self, project_path):
         self.venv_activated = False
-        self.project_path = str(project_path)
+        self.project_path = str(pathlib.Path(project_path).resolve())
         self.project_name = os.path.basename(self.project_path)
         self.tests = []
 
@@ -139,15 +139,8 @@ class Project(object):
     def find_test_modules(self):
         modules = []
         for f in find_files(self.project_path, ".py", self.exclude_folders, []):
-            with open(f) as file:
-                module_text = file.read()
-                if module_text:
-                    # print(module_text)
-                    module_node = astroid.parse(module_text)
-                    test_classes = au.classes_with_base_class(module_node, "TestCase")
-                    if len(test_classes) > 0:
-                        modules.append(f)
-        # ladies and gentleman, we got him
+            if os.path.basename(f)[:4].lower() == "test":
+                modules.append(f)
         return modules
 
     def find_modules(self):

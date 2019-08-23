@@ -1,7 +1,8 @@
 import os
 import unittest
-import util.reflection as ur
 from model.project import Project
+
+import util.astroid_util as au
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -16,12 +17,14 @@ class TestReflection(unittest.TestCase):
         cls_name = "MultiDict"
         project.add_to_path()
         multidict_path = [p for p in module_paths if m_file in p][0]
-        module = ur.try_load_module(multidict_path)
 
-        multidict_cls = [descriptor for name, descriptor in ur.module_classes(module)
-                         if name == cls_name][0]
+        fns, clss, _ = au.compile_module(multidict_path)
+        self.assertIn(cls_name, clss.keys())
+        methods = clss[cls_name]
+        m_names = [m.func.__name__ for m in methods]
 
-        self.assertIn("items", ur.class_functions(multidict_cls, m_type=ur.DEFINED))
-        self.assertIn("put", ur.class_functions(multidict_cls, m_type=ur.OVERRIDDEN))
-        self.assertIn("get", ur.class_functions(multidict_cls, m_type=ur.INHERITED))
+        self.assertIn("__init__", m_names)
+        self.assertIn("items", m_names)
+        self.assertIn("put", m_names)
+        self.assertIn("clear", m_names)
 

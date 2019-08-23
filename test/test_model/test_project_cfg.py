@@ -1,32 +1,40 @@
 import os
 import unittest
-import sys
+import pathlib
 from model.cfg.project_cfg import ProjectCFG
 from model.project import Project
 
-THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+THIS_DIR = pathlib.Path(os.path.dirname(os.path.abspath(__file__)))
 
 
 class TestProjectCFG(unittest.TestCase):
 
-    def test_init(self):
-
+    def setUp(self) -> None:
         relative_path = "../../dataset/linked_list"
-        project_path = os.path.join(THIS_DIR, relative_path)
+        project_path = THIS_DIR / relative_path
         project = Project(project_path)
 
-        project_cfg = ProjectCFG(project)
+        self.project_cfg = ProjectCFG.create(project)
+        self.ll_module_path = THIS_DIR / "../../dataset/linked_list/core/ll.py"
+        self.ll_module_path = self.ll_module_path.resolve()
 
-        self.assertIsNotNone(project_cfg)
+    def test_init(self):
+        self.assertIsNotNone(self.project_cfg)
 
     def test_found_ll_py(self):
-        relative_path = "../../dataset/linked_list"
-        project_cfg = ProjectCFG(Project(os.path.join(THIS_DIR, relative_path)))
 
-        for mod_cfg in project_cfg.module_cfgs:
+        for file_path, mod_cfg in self.project_cfg.module_cfgs.items():
             for cls_cfg in mod_cfg.class_cfgs:
                 if cls_cfg == "LinkedList":
                     self.assertTrue(True)
                     return
         self.assertTrue(False)
 
+    def test_get_variables(self):
+
+        defs, uses = self.project_cfg.get_variables(str(self.ll_module_path), 11)
+        self.assertIn("self.root", defs)
+
+    def test_get_variables_wrong_line(self):
+        variables = self.project_cfg.get_variables(str(self.ll_module_path), 1100)
+        self.assertEqual(variables, ([], []))

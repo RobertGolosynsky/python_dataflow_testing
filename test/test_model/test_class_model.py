@@ -15,13 +15,12 @@ class TestClassModel(unittest.TestCase):
         relative_path = "../../dataset/dictionary"
         cls.project = Project(os.path.join(THIS_DIR, relative_path))
 
-        with cls.project as p:
-            cls.project_cfg = ProjectCFG(p)
+        cls.project_cfg = ProjectCFG.create(cls.project)
 
         multi_dict_class_name = "MultiDict"
         multidict_cfg = None
         # self.project.add_to_path()
-        for mod_cfg in cls.project_cfg.module_cfgs:
+        for file_path, mod_cfg in cls.project_cfg.module_cfgs.items():
             for cls_name in mod_cfg.class_cfgs:
                 if cls_name == multi_dict_class_name:
                     multidict_cfg = mod_cfg.class_cfgs[cls_name]
@@ -29,16 +28,10 @@ class TestClassModel(unittest.TestCase):
 
     def test_found_inherited_methods(self):
 
-        self.assertIn("items", self.multidict_cfg.defined_methods)
+        self.assertIn("items", self.multidict_cfg.methods)
 
-        self.assertIn("put", self.multidict_cfg.overridden_methods)
-        self.assertIn("__init__", self.multidict_cfg.overridden_methods)
-
-        self.assertIn("__len__", self.multidict_cfg.inherited_methods)
-        self.assertIn("get", self.multidict_cfg.inherited_methods)
+        self.assertIn("put", self.multidict_cfg.methods)
+        self.assertIn("__init__", self.multidict_cfg.methods)
 
     def test_local_interclass_pairs(self):
-        self.assertEqual(1, len(self.multidict_cfg.interclass_pairs))
-
-    # def test_found_inherited_methods1(self):
-    #     a = 1
+        self.assertEqual(7, len(self.multidict_cfg.interclass_pairs))
