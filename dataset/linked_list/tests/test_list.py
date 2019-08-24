@@ -38,7 +38,7 @@ class LinkedListTest(unittest.TestCase):
         ll.append(2)
         ll.remove(0)
         ll.remove(0)
-        self.assertEquals(0, ll.len())
+        self.assertEqual(0, ll.len())
 
     def test_remove_middle(self):
         ll = LinkedList()
@@ -46,7 +46,7 @@ class LinkedListTest(unittest.TestCase):
         ll.append(2)
         ll.append(3)
         ll.remove(1)
-        self.assertEquals(3, ll.get(1))
+        self.assertEqual(3, ll.get(1))
 
     def test_remove_first_append(self):
         ll = LinkedList()
@@ -55,7 +55,7 @@ class LinkedListTest(unittest.TestCase):
         ll.append(3)
         ll.remove(0)
         ll.append(4)
-        self.assertEquals([2, 3, 4], ll.as_list())
+        self.assertEqual([2, 3, 4], ll.as_list())
 
     def test_len(self):
         ll = LinkedList()
@@ -109,11 +109,11 @@ class LinkedListTest(unittest.TestCase):
     def test_as_list(self):
         l = [1, 2, 3]
         ll = LinkedList(l)
-        self.assertEquals(l, ll.as_list())
+        self.assertEqual(l, ll.as_list())
 
     def test_as_list_on_empty(self):
         ll = LinkedList()
-        self.assertEquals([], ll.as_list())
+        self.assertEqual([], ll.as_list())
 
     def test_remove_first_as_list(self):
         ll = LinkedList()
@@ -121,7 +121,7 @@ class LinkedListTest(unittest.TestCase):
         ll.append(2)
         ll.append(3)
         ll.remove(0)
-        self.assertEquals([2, 3], ll.as_list())
+        self.assertEqual([2, 3], ll.as_list())
 
 
 if __name__ == '__main__':
