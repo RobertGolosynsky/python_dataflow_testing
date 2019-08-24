@@ -1,12 +1,8 @@
 from tracing.index_factory import VarIndex
 from tracing.trace_reader import read_df
 from graphs.draw import source_w_pairs
+from tracing.tracer import SCOPE_INDEX, IDX_INDEX, LINE_INDEX
 
-IDX_INDEX = 0
-FILE_INDEX = 1
-LINE_INDEX = 2
-SELF_INDEX = 3
-SCOPE_INDEX = 4
 
 def analyze(trace_path, index: VarIndex, scopes_ends):
     df, size_mb = read_df(trace_path)

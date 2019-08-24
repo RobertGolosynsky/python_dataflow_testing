@@ -12,6 +12,12 @@ import shutil
 
 matcher_ext = load_cpp_extension("matcher_ext")
 
+IDX_INDEX = 0
+FILE_INDEX = 1
+LINE_INDEX = 2
+SELF_INDEX = 3
+SCOPE_INDEX = 4
+
 
 class Tracer(object):
     trace_file_ext = "trace"

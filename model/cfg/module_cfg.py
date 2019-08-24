@@ -33,6 +33,14 @@ class ModuleCFG(object):
         self.intermethod_pairs = self._calculate_intermethod()
         self.interclass_pairs = self._calculate_interclass()
 
+        self.branches = []
+        for cls_cfg in self.class_cfgs.values():
+            for func_cfg in cls_cfg.methods.values():
+                self.branches.extend(func_cfg.branches)
+
+        for func_cfg in self.function_cfgs.values():
+            self.branches.extend(func_cfg.branches)
+
     def _calculate_interclass(self):
         interclass_pairs = []
         for name, cls_cfg in self.class_cfgs.items():
