@@ -1,12 +1,9 @@
-from collections import defaultdict
-
 import dataflow.def_use as du
 import dataflow.reaching_definitions as rd
-import graphs.create as cr
 
 from loguru import logger
 
-from branch_coverage.branch_coverage import first_lines_of_branches
+
 from util.astroid_util import Function
 
 
@@ -20,6 +17,7 @@ class FunctionCFG:
         definitions, uses = self.cfg.collect_definitions_and_uses(filter_self=filter_self)
         self.definitions = definitions
         self.uses = uses
+        from coverage_metrics.branch_coverage import first_lines_of_branches
         self.branches = first_lines_of_branches(self.cfg.g)
 
     @staticmethod

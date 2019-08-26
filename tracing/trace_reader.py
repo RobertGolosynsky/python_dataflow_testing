@@ -11,12 +11,12 @@ from tracing.tracer import Tracer
 def get_trace_files(root, suffix=Tracer.trace_file_ext, trace_name=None, file_index=None):
     trace_files = []
     for dirpath, dnames, fnames in os.walk(root):
-        if trace_name is None or (trace_name is not None and dirpath.endswith(trace_name)):
+        if trace_name is None or dirpath.endswith(trace_name):
             for f in fnames:
                 if f.endswith(suffix):
                     if file_index is None:
                         trace_files.append(os.path.join(dirpath, f))
-                    elif file_index is not None and f.endswith(str(file_index) + "." + suffix):
+                    elif f.endswith(str(file_index) + "." + suffix):
                         return os.path.join(dirpath, f)
     if file_index:
         return None
@@ -64,3 +64,19 @@ def read_scopes_for_trace_file(trace_file_path):
     ).values
 
     return dict(np_array)
+
+
+def get_test_cases(trace_root):
+    path = os.path.join(trace_root, Tracer.trace_folder)
+    print("asdasdasd",path)
+    return next(os.walk(path))[1]
+
+
+def get_traces_of_file(trace_root, file_index):
+    file_name = str(file_index) + os.path.extsep + Tracer.trace_file_ext
+    root = Path(trace_root) / Tracer.trace_folder
+    paths = []
+    for test_case in get_test_cases(trace_root):
+        trace_file_path = root / test_case / file_name
+        paths.append((test_case, trace_file_path))
+    return paths

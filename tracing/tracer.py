@@ -10,6 +10,8 @@ from cpp.cpp_import import load_cpp_extension
 
 import shutil
 
+from model.test_case import TestCase
+
 matcher_ext = load_cpp_extension("matcher_ext")
 
 IDX_INDEX = 0
@@ -87,12 +89,17 @@ class Tracer(object):
         return os.path.join(self.trace_folder, self.files_index_file)
 
     def _trace_file_path(self, trace_name, file_under_trace):
+        if isinstance(trace_name, TestCase):
+            trace_name = trace_name.to_folder_name()
+
         this_trace_folder = os.path.join(self.trace_folder, trace_name)
         os.makedirs(this_trace_folder, exist_ok=True)
         file_name = str(file_under_trace) + "." + self.trace_file_ext
         return os.path.join(this_trace_folder, file_name)
 
     def _scope_file_path(self, trace_name, file_under_trace):
+        if isinstance(trace_name, TestCase):
+            trace_name = trace_name.to_folder_name()
         this_trace_folder = os.path.join(self.trace_folder, trace_name)
         os.makedirs(this_trace_folder, exist_ok=True)
         file_name = str(file_under_trace) + "." + self.scopes_file_ext

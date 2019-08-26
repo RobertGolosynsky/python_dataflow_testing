@@ -33,13 +33,15 @@ class ModuleCFG(object):
         self.intermethod_pairs = self._calculate_intermethod()
         self.interclass_pairs = self._calculate_interclass()
 
-        self.branches = []
+        self.branches = set()
         for cls_cfg in self.class_cfgs.values():
             for func_cfg in cls_cfg.methods.values():
-                self.branches.extend(func_cfg.branches)
+                self.branches |= func_cfg.branches
 
         for func_cfg in self.function_cfgs.values():
-            self.branches.extend(func_cfg.branches)
+            self.branches |= func_cfg.branches
+        print(type(self.branches))
+
 
     def _calculate_interclass(self):
         interclass_pairs = []
@@ -74,3 +76,10 @@ class ModuleCFG(object):
             if variables is not None:
                 return variables
         return None
+
+    def walk(self):
+        for fname, cfg in self.function_cfgs.items():
+            yield fname, cfg
+        for cls_cfg in self.class_cfgs.values():
+            for fname, func_cfg in cls_cfg.methods.items():
+                yield fname, func_cfg

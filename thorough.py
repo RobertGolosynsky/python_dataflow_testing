@@ -3,33 +3,36 @@ import os
 from pathlib import Path
 import pytest
 
+from model.test_case import TestCase
 from tracing.tracer import Tracer
+
+x = ""
 
 
 class MyPlugin:
     def __init__(self, tracer):
         self.tracer = tracer
 
-    @staticmethod
-    def test_item_to_folder_name(item):
-        return "_".join(map(str, item.location)).replace("/", "-")
-
     def pytest_runtest_call(self, item):
-        # print(dir(item))
-        # print(item.location)
-        # print(item.name)
-        # print(item.module)
-        case_name = self.test_item_to_folder_name(item)
-        logger.info("Running test case {case}", case=case_name)
-        self.tracer.start(trace_name=case_name)
+        rel_path, line, class_and_method = item.location
+        cls = ""
+        if "." in class_and_method:
+            cls, method = class_and_method.split(".")
+        else:
+            method = class_and_method
+        test_case = TestCase(rel_path, cls, method)
+        logger.info("Running test case {case}", case=test_case)
+        self.tracer.start(trace_name=test_case)
 
     def pytest_runtest_teardown(self, item):
         self.tracer.stop()
 
 
-def runTests(project_root, trace_root, ignore_dirs=[], show_time_per_test=True):
+def runTests(project_root, trace_root, exclude_folders=None, show_time_per_test=True):
     # sys.argv.append("--ignore=dataset")
-    ignore_dirs_expanded = [str((Path(project_root) / d).resolve()) for d in ignore_dirs]
+    if not exclude_folders:
+        exclude_folders = []
+    ignore_dirs_expanded = [str((Path(project_root) / d).resolve()) for d in exclude_folders]
     t = Tracer(
         [
             str(project_root),
@@ -39,19 +42,29 @@ def runTests(project_root, trace_root, ignore_dirs=[], show_time_per_test=True):
     )
 
     pytest_params = []
-    pytest_params += ["--ignore=" + d for d in ignore_dirs]
+    pytest_params += ["--ignore=" + d for d in exclude_folders]
 
     if show_time_per_test:
         pytest_params.append("--durations=0")
+
     current_working_dir = os.curdir
     os.chdir(project_root)
     pytest.main(
         pytest_params,
-        plugins=[MyPlugin(tracer=t)]
+        plugins=[MyPlugin(tracer=t)],
     )
 
     t.fullstop()
     os.chdir(current_working_dir)
+    print(x)
+
+
+AVAILABLE_COVERAGE_METRICS = ["STATEMENT", "BRANCH", "DATAFLOW"]
+
+
+def calculate_coverage(metrics=None):
+    if not metrics:
+        metrics = AVAILABLE_COVERAGE_METRICS
 
 
 if __name__ == "__main__":
