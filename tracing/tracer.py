@@ -65,25 +65,6 @@ class Tracer(object):
 
         logger.info("Created Tracer object with logging to {trace_folder_parent}, {keep}, {exclude}",
                     trace_folder_parent=trace_folder_parent, keep=keep, exclude=exclude)
-        # remove this
-
-        self.after_write = 0
-        self.before_write_log = 0
-        self.before_call_check = 0
-        self.before_locals = 0
-        self.check_time = 0
-        self.before_if = 0
-
-    def times(self):
-        return {
-            "each_trace": self.before_if,
-            "if_time": self.check_time,
-            "get_locals": self.before_locals,
-            "check_if_comprehension": self.before_call_check,
-            "scope_logic": self.before_write_log,
-            "write_trace": self.after_write,
-
-        }
 
     def _index_file_path(self):
         return os.path.join(self.trace_folder, self.files_index_file)
@@ -154,77 +135,39 @@ class Tracer(object):
         logger.debug("Tracer closed, file index saved to {p}", p=self._index_file_path())
 
     def _tracefunc(self, frame, event, _):
-        # st = time()
         file_path = frame.f_code.co_filename
-
-        should_trace_deeper = False
-
-        interructive = False
-
-        # self.before_if += (time() - st)
-        st = time()
         if self.fileNameHelper.should_include(file_path):
-            self.check_time += (time() - st)
-            # st = time()
-
             line = frame.f_lineno
             is_comprehension = False
             f_locals = frame.f_locals
 
-            # self.before_locals += (time() - st)
-            # st = time()
-
             if len(f_locals) > 0 and ".0" in f_locals:
                 is_comprehension = True
-
-            # self.before_call_check += (time() - st)
-            # st = time()
+            is_call = False
+            is_return = False
+            is_line = False
             if event == "call":
+                is_call = True
                 self.scope_counter += 1
                 self.scope_stack.append(self.scope_counter)
             elif event == "return":
+                is_return = True
                 file_idx = self.file_index[file_path]
                 self._log_scope_closed(file=file_idx, scope=self.scope_stack[-1])
                 self.scope_stack.pop()
 
             scope = self.scope_stack[-1]
-
-            # self.before_write_log += (time() - st)
-            # st = time()
-
-            should_trace_deeper = True
-            # if interructive:
-            #     args = inspect.getargvalues(frame)
-            # # if self.interactive:
-            #     code, start = inspect.getsourcelines(frame)
-            #     for i, l in enumerate(code):
-            #         cur = start+i
-            #         prefix = "   "
-            #         if cur == line:
-            #             prefix = ">>>"
-            #         print(prefix, cur, l, end="")
-            #     print(args)
-            #     print("Scope:", scope)
-            #     print("Event:", event)
-            #     input()
-            # frame_self = id(args.locals["self"]) if "self" in args.locals else None
-
             frame_self = frame.f_locals.get("self", None)
-            if frame_self:
-                frame_self = id(frame_self)
-            else:
-                frame_self = -1
+            frame_self = id(frame_self) if frame_self is not None else frame_self
 
             if is_comprehension:
                 pass
-            elif event == "line" or event == "call":
+            elif is_line or is_call:
                 if file_path in self.file_index:
                     file_idx = self.file_index[file_path]
                 else:
                     self.file_index[file_path] = len(self.file_index)
                     file_idx = len(self.file_index) - 1
                 self._log_line(file_idx, line, frame_self, scope)
-            # self.after_write += (time() - st)
 
-        # if should_trace_deeper:
         return self._tracefunc
