@@ -37,7 +37,6 @@ class ProjectCFG:
         self.module_cfgs = {}
         self.cache = {}
         self.module_paths = find_files(self.project_path, ".py", self.exclude_folders, self.exclude_files)
-
         cache_valid = not self._check_project_changed()
 
         if use_cached_if_possible and cache_valid:

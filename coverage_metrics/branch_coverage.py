@@ -27,7 +27,7 @@ def first_lines_of_branches(g: nx.DiGraph) -> Set:
 
 
 class BranchCoverage(StatementCoverage):
-    column_name = "Branch coverage"
+    column_name = "BrCov"
 
     def __init__(self, trace_root, project_root, exclude_folders=None):
         super().__init__(trace_root, project_root, exclude_folders)
@@ -38,7 +38,6 @@ class BranchCoverage(StatementCoverage):
         for test_case_trace_root in trace_root.iterdir():
             if not test_case_trace_root.is_dir():
                 continue
-            print(test_case_trace_root)
 
             test_case_coverage = np.zeros(shape=len(self.files_index))
             for trace_file in test_case_trace_root.iterdir():
@@ -55,7 +54,7 @@ class BranchCoverage(StatementCoverage):
 
         return pd.DataFrame.from_dict(data, orient='index')
 
-    def module_coverage(self):
+    def report(self):
         covered_statements = self.covered_statements_per_tracee()
         data = {}
         for tracee in covered_statements:

@@ -15,7 +15,7 @@ class TestBranchCoverageClass(unittest.TestCase):
         trace_root = create_new_temp_dir()
         exclude_folders = ["venv", "dataset"]
 
-        thorough.runTests(project_root, trace_root, exclude_folders)
+        thorough.run_tests(project_root, trace_root, exclude_folders)
 
         coverage = StatementCoverage(trace_root, project_root, exclude_folders=exclude_folders)
         report = coverage.report()

@@ -34,7 +34,7 @@ class TestTraceAnalyzer(unittest.TestCase):
         exclude_folders = ["venv"]
         cfg = ProjectCFG(project_root, exclude_folders=exclude_folders)
 
-        thorough.runTests(LINKED_LIST_ROOT, trace_root, exclude_folders)
+        thorough.run_tests(LINKED_LIST_ROOT, trace_root, exclude_folders)
 
         vi = VarIndexFactory.new_py_index(project_root, trace_root)
         file_index = read_files_index(trace_root)

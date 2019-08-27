@@ -47,7 +47,7 @@ class TestBranchCoverage(unittest.TestCase):
                          exclude_folders=exclude_folders,
                          use_cached_if_possible=False)
 
-        thorough.runTests(LINKED_LIST_ROOT, trace_root, exclude_folders)
+        thorough.run_tests(LINKED_LIST_ROOT, trace_root, exclude_folders)
 
         file_index = read_files_index(trace_root)
         ll_py = str(LINKED_LIST_LL)

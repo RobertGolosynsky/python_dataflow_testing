@@ -49,5 +49,6 @@ def trace_this(function, project_root=PROJECT_ROOT, trace_root=TEMP_DIRECTORY, a
 
 def get_trace(function, *args, **kwargs):
     trace_file_path = trace_this(function, *args, **kwargs)
+    print(trace_file_path)
     trace, _ = read_df(trace_file_path)
     return trace

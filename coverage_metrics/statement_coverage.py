@@ -10,9 +10,9 @@ from tracing.tracer import LINE_INDEX
 
 class StatementCoverage:
 
-    file_name_col = "File name"
-    file_path_col = "File path"
-    coverage_col = "Statement coverage"
+    file_name_col = "Fname"
+    file_path_col = "Fpath"
+    coverage_col = "StCov"
 
     def __init__(self, trace_root, project_root, exclude_folders=None):
         self.project_cfg = ProjectCFG(project_root, exclude_folders=exclude_folders,
@@ -53,8 +53,6 @@ class StatementCoverage:
         data = {}
 
         for tracee_index in self.files_index:
-            tracee_path = self.files_index[tracee_index]
-            print("tracee", tracee_path)
 
             covered_lines = {}
 

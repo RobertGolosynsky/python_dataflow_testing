@@ -34,7 +34,7 @@ class TestTraceAnalyzer(unittest.TestCase):
         exclude_folders = ["venv"]
         cfg = ProjectCFG(project_root, exclude_folders=exclude_folders)
 
-        thorough.runTests(LINKED_LIST_ROOT, trace_root, exclude_folders)
+        thorough.run_tests(LINKED_LIST_ROOT, trace_root, exclude_folders)
 
         cppvi = VarIndexFactory.new_cpp_index(project_root, trace_root)
         file_index = read_files_index(trace_root)
@@ -43,6 +43,7 @@ class TestTraceAnalyzer(unittest.TestCase):
 
         def get_pairs(trace_name):
             trace_file = get_trace_files(trace_root, trace_name=trace_name, file_index=ll_py_idx)
+            print(trace_file)
             np_array, _ = read_df(trace_file)
             idx_pairs = analyze_trace_w_index(trace_file, cppvi)
 

@@ -44,7 +44,7 @@ class TestComputeCoverage(unittest.TestCase):
                          exclude_folders=exclude_folders,
                          use_cached_if_possible=False)
 
-        thorough.runTests(LINKED_LIST_ROOT, trace_root, exclude_folders)
+        thorough.run_tests(LINKED_LIST_ROOT, trace_root, exclude_folders)
 
         vi = VarIndexFactory.new_py_index(project_root, trace_root)
         cppvi = VarIndexFactory.new_cpp_index(project_root, trace_root)

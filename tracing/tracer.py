@@ -145,9 +145,9 @@ class Tracer(object):
                 is_comprehension = True
             is_call = False
             is_return = False
-            is_line = False
             if event == "call":
                 is_call = True
+
                 self.scope_counter += 1
                 self.scope_stack.append(self.scope_counter)
             elif event == "return":
@@ -158,11 +158,11 @@ class Tracer(object):
 
             scope = self.scope_stack[-1]
             frame_self = frame.f_locals.get("self", None)
-            frame_self = id(frame_self) if frame_self is not None else frame_self
+            frame_self = id(frame_self) if frame_self is not None else -1
 
             if is_comprehension:
                 pass
-            elif is_line or is_call:
+            elif is_call or event == "line":
                 if file_path in self.file_index:
                     file_idx = self.file_index[file_path]
                 else:

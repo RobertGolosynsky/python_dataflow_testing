@@ -6,8 +6,6 @@ import pytest
 from model.test_case import TestCase
 from tracing.tracer import Tracer
 
-x = ""
-
 
 class MyPlugin:
     def __init__(self, tracer):
@@ -28,8 +26,7 @@ class MyPlugin:
         self.tracer.stop()
 
 
-def runTests(project_root, trace_root, exclude_folders=None, show_time_per_test=True):
-    # sys.argv.append("--ignore=dataset")
+def run_tests(project_root, trace_root, exclude_folders=None, show_time_per_test=True):
     if not exclude_folders:
         exclude_folders = []
     ignore_dirs_expanded = [str((Path(project_root) / d).resolve()) for d in exclude_folders]
@@ -56,17 +53,8 @@ def runTests(project_root, trace_root, exclude_folders=None, show_time_per_test=
 
     t.fullstop()
     os.chdir(current_working_dir)
-    print(x)
-
-
-AVAILABLE_COVERAGE_METRICS = ["STATEMENT", "BRANCH", "DATAFLOW"]
-
-
-def calculate_coverage(metrics=None):
-    if not metrics:
-        metrics = AVAILABLE_COVERAGE_METRICS
 
 
 if __name__ == "__main__":
     here = str(Path("").resolve())
-    runTests(here, here, ignore_dirs=["dataset", "venv"])
+    run_tests(here, here, exclude_folders=["dataset", "venv"])

@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 
+from model.test_case import TestCase
 from tracing.tracer import Tracer
 
 
@@ -68,7 +69,7 @@ def read_scopes_for_trace_file(trace_file_path):
 
 def get_test_cases(trace_root):
     path = os.path.join(trace_root, Tracer.trace_folder)
-    print("asdasdasd",path)
+    print("asdasdasd", path)
     return next(os.walk(path))[1]
 
 
@@ -78,5 +79,14 @@ def get_traces_of_file(trace_root, file_index):
     paths = []
     for test_case in get_test_cases(trace_root):
         trace_file_path = root / test_case / file_name
-        paths.append((test_case, trace_file_path))
+        if trace_file_path.is_file():
+            paths.append((test_case, trace_file_path))
     return paths
+
+
+def trace_path_to_tracee_index_and_test_case(s):
+    trace_path = Path(s)
+    test_case_folder_name = trace_path.parent.name
+    test_case = TestCase.from_folder_name(test_case_folder_name)
+    tracee_index = int(trace_path.stem)
+    return tracee_index, test_case
