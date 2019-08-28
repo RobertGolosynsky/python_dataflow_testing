@@ -40,7 +40,7 @@ class TestComputeCoverage(unittest.TestCase):
         trace_root = create_new_temp_dir()
         print(trace_root)
         exclude_folders = ["venv"]
-        cfg = ProjectCFG(project_root,
+        cfg = ProjectCFG.create_from_path(project_root,
                          exclude_folders=exclude_folders,
                          use_cached_if_possible=False)
 
@@ -80,10 +80,11 @@ class TestComputeCoverage(unittest.TestCase):
         print_percent("Intermethod", total_intermethod_pairs, ll_py_cfg.intermethod_pairs)
         print_percent("Interclass", total_interclass_pairs, ll_py_cfg.interclass_pairs)
         total_pairs_exercised = total_interclass_pairs + total_intermethod_pairs + total_intramethod_pairs
-        total_pairs_possible = ll_py_cfg.interclass_pairs + ll_py_cfg.intermethod_pairs + ll_py_cfg.intramethod_pairs
+        total_pairs_possible = ll_py_cfg.interclass_pairs | ll_py_cfg.intermethod_pairs | ll_py_cfg.intramethod_pairs
 
         print_percent("Total unique pairs", total_pairs_exercised, total_pairs_possible)
-        not_exercised_pairs = only_lines(set(total_pairs_possible)) - set(total_pairs_exercised)
+
+        not_exercised_pairs = total_pairs_possible - set(total_pairs_exercised)
         print("Not exercised pairs total ({}): ".format(len(not_exercised_pairs)), not_exercised_pairs)
         print("total intermethod", ll_py_cfg.intermethod_pairs)
 

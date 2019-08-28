@@ -3,7 +3,11 @@ import os
 from pathlib import Path
 import pytest
 
+from coverage_metrics.branch_coverage import BranchCoverage
+from coverage_metrics.def_use_coverage import DefUsePairsCoverage
+from coverage_metrics.statement_coverage import StatementCoverage
 from model.test_case import TestCase
+from test.test_tracer import create_new_temp_dir
 from tracing.tracer import Tracer
 
 
@@ -26,7 +30,11 @@ class MyPlugin:
         self.tracer.stop()
 
 
-def run_tests(project_root, trace_root, exclude_folders=None, show_time_per_test=True):
+def run_tests(project_root, trace_root,
+              exclude_folders=None,
+              show_time_per_test=True,
+              deselect_tests=None
+              ):
     if not exclude_folders:
         exclude_folders = []
     ignore_dirs_expanded = [str((Path(project_root) / d).resolve()) for d in exclude_folders]
@@ -43,6 +51,8 @@ def run_tests(project_root, trace_root, exclude_folders=None, show_time_per_test
 
     if show_time_per_test:
         pytest_params.append("--durations=0")
+    if deselect_tests and isinstance(deselect_tests, list):
+        pytest_params += ["--deselect=" + d for d in deselect_tests]
 
     current_working_dir = os.curdir
     os.chdir(project_root)
@@ -56,5 +66,30 @@ def run_tests(project_root, trace_root, exclude_folders=None, show_time_per_test
 
 
 if __name__ == "__main__":
-    here = str(Path("").resolve())
-    run_tests(here, here, exclude_folders=["dataset", "venv"])
+    # trace_root = create_new_temp_dir()
+    trace_root = "/tmp/thorough/2019-08-28_02-17-10-800489/"
+    project_root = str(Path("").resolve())
+    exclude_folders = ["dataset", "venv"]
+    # run_tests(project_root, trace_root,
+    #           exclude_folders=exclude_folders,
+    #           deselect_tests=[
+    #               ""
+    #           ]
+    #
+    #           )
+    coverage_exclude = exclude_folders+["test"]
+
+    import pandas as pd
+
+    pd.options.display.width = 0
+    pd.options.display.float_format = '{:,.2f}'.format
+    max_size = 100
+    stcoverage = StatementCoverage(trace_root, project_root, exclude_folders=coverage_exclude, max_trace_size=max_size)
+    brcoverage = BranchCoverage(trace_root, project_root, exclude_folders=coverage_exclude, max_trace_size=max_size)
+    ducoverage = DefUsePairsCoverage(trace_root, project_root, exclude_folders=coverage_exclude, max_trace_size=max_size)
+    streport = stcoverage.report()
+    brreport = brcoverage.report()
+    dureport = ducoverage.report()
+    merged_report: pd.DataFrame = pd.concat([streport, brreport, dureport], axis=1)
+    merged_report = merged_report[pd.notnull(merged_report['StCov'])]
+    print(merged_report)

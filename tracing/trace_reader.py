@@ -5,8 +5,10 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 
+from loguru import logger
+
 from model.test_case import TestCase
-from tracing.tracer import Tracer
+from tracing.tracer import Tracer, IDX_INDEX, FILE_INDEX, LINE_INDEX, SELF_INDEX, SCOPE_INDEX
 
 
 def get_trace_files(root, suffix=Tracer.trace_file_ext, trace_name=None, file_index=None):
@@ -32,13 +34,21 @@ def read_files_index(trace_root):
         return {int(k): v for k, v in file_dict.items()}
 
 
-def read_df(f, cut=-1):
+def read_df(f, cut=-1, max_size_mb=None):
+    logger.info("Reading trace {f}", f=f)
     file_size = os.stat(f).st_size // (1024 * 1024)
+    if max_size_mb and file_size > max_size_mb:
+        return None, file_size
     np_array = pd.read_csv(
         f,
         header=None,
         delimiter=",",
-        dtype=int  # TODO: optimize
+        dtype={IDX_INDEX: "int64",
+               FILE_INDEX: "int16",
+               LINE_INDEX: "int16",
+               SELF_INDEX: "int64",
+               SCOPE_INDEX: "int64"},
+        low_memory=True
     ).values
 
     prev_len = len(np_array)
@@ -57,6 +67,8 @@ def read_scopes_for_trace_file(trace_file_path):
     file_name_w_o_suffix = p.stem
 
     scopes_file_path = parent / (file_name_w_o_suffix + "." + Tracer.scopes_file_ext)
+    if not scopes_file_path.is_file():
+        return None
     np_array = pd.read_csv(
         scopes_file_path,
         header=None,
@@ -69,11 +81,10 @@ def read_scopes_for_trace_file(trace_file_path):
 
 def get_test_cases(trace_root):
     path = os.path.join(trace_root, Tracer.trace_folder)
-    print("asdasdasd", path)
     return next(os.walk(path))[1]
 
 
-def get_traces_of_file(trace_root, file_index):
+def get_traces_for_tracee(trace_root, file_index):
     file_name = str(file_index) + os.path.extsep + Tracer.trace_file_ext
     root = Path(trace_root) / Tracer.trace_folder
     paths = []

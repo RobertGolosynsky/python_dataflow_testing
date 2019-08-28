@@ -40,28 +40,26 @@ class ModuleCFG(object):
 
         for func_cfg in self.function_cfgs.values():
             self.branches |= func_cfg.branches
-        print(type(self.branches))
-
 
     def _calculate_interclass(self):
-        interclass_pairs = []
+        interclass_pairs = set()
         for name, cls_cfg in self.class_cfgs.items():
-            interclass_pairs.extend(cls_cfg.interclass_pairs)
+            interclass_pairs.update(cls_cfg.interclass_pairs)
         return interclass_pairs
 
     def _calculate_intermethod(self):
-        total_intermethod_pairs = []
+        total_intermethod_pairs = set()
 
         for name, cls_cfg in self.class_cfgs.items():
-            total_intermethod_pairs.extend(cls_cfg.intermethod_pairs)
+            total_intermethod_pairs.update(cls_cfg.intermethod_pairs)
         return total_intermethod_pairs
 
     def _calculate_intra_method(self):
-        total_intramethod_pairs = []
+        total_intramethod_pairs = set()
         for name, cls_cfg in self.class_cfgs.items():
-            total_intramethod_pairs.extend(cls_cfg.intramethod_pairs)
+            total_intramethod_pairs.update(cls_cfg.intramethod_pairs)
         for name, function_cfg in self.function_cfgs.items():
-            total_intramethod_pairs.extend(function_cfg.pairs)
+            total_intramethod_pairs.update(function_cfg.pairs)
         return total_intramethod_pairs
 
     def get_variables(self, line):

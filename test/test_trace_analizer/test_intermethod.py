@@ -32,7 +32,7 @@ class TestTraceAnalyzer(unittest.TestCase):
         trace_root = create_new_temp_dir()
         print(trace_root)
         exclude_folders = ["venv"]
-        cfg = ProjectCFG(project_root, exclude_folders=exclude_folders)
+        cfg = ProjectCFG.create_from_path(project_root, exclude_folders=exclude_folders)
 
         thorough.run_tests(LINKED_LIST_ROOT, trace_root, exclude_folders)
 
@@ -45,6 +45,8 @@ class TestTraceAnalyzer(unittest.TestCase):
             trace_file = get_trace_files(trace_root, trace_name=trace_name, file_index=ll_py_idx)
             np_array, _ = read_df(trace_file)
             scopes = read_scopes_for_trace_file(trace_file)
+            if not scopes:
+                return set(), set(), set()
             inter_method_pairs, intra_class_pairs = analyze(trace_file, vi, scopes)
 
             def rename_vars(s):

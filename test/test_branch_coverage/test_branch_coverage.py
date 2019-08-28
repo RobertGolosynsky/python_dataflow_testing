@@ -43,7 +43,7 @@ class TestBranchCoverage(unittest.TestCase):
         trace_root = create_new_temp_dir()
         print(trace_root)
         exclude_folders = ["venv"]
-        cfg = ProjectCFG(project_root,
+        cfg = ProjectCFG.create_from_path(project_root,
                          exclude_folders=exclude_folders,
                          use_cached_if_possible=False)
 

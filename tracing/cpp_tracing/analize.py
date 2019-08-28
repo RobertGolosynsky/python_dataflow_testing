@@ -66,21 +66,21 @@ def analyze_trace_w_index(trace_file, cpp_var_index, cut=-1):
     np_array, file_size = read_df(trace_file, cut=cut)
     # with np.printoptions(precision=3, linewidth=100):
     #     print(np_array)
-    st = time()
+    # st = time()
     pairs_cpp_new = cpp_pairs_w_index(np_array, cpp_var_index)
     # print_rows(pairs_cpp_new)
-    total_new = time() - st
+    # total_new = time() - st
 
-    pairs_count_new = _count_pairs(pairs_cpp_new)
+    # pairs_count_new = _count_pairs(pairs_cpp_new)
 
-    print("total with index", total_new)
-    print("Speed: {}Mb/s".format(file_size // total_new))
+    # print("total with index", total_new)
+    # print("Speed: {}Mb/s".format(file_size // total_new))
 
     # print("New variant is {} times faster".format(int(total_old / total_new)))
     # print("Old found {} pairs, new found {} pairs".format(pairs_count_old, pairs_count_new))
-    print("With index found {} pairs".format(pairs_count_new))
+    # print("With index found {} pairs".format(pairs_count_new))
     unique_pairs = _unique_pairs(pairs_cpp_new)
-    print("Unique pairs {}".format(len(unique_pairs)))
+    # print("Unique pairs {}".format(len(unique_pairs)))
 
     # print_pairs(pairs_cpp_new)
 

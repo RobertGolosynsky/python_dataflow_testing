@@ -61,30 +61,30 @@ class ClassCFG(object):
         public_methods = without_init.copy()
         if "__init__" in self.methods:
             public_methods["__init__"] = self.methods["__init__"]
-        interclass_pairs = []
+        interclass_pairs = set()
 
         for (n1, m1), (n2, m2) in product(public_methods.items(), without_init.items()):
             pairs = ic.inter_class_def_use_pairs_cfg(m1.extended_cfg, m2.extended_cfg)
-            interclass_pairs.extend(pairs)
+            interclass_pairs.update(only_lines(pairs))
 
         return interclass_pairs
 
     def _calculate_intermethod(self):
-        total_intermethod_pairs = []
+        total_intermethod_pairs = set()
         for name, method_cfg in self.methods.items():
             intermethod_pairs = rd.definition_use_pairs(
                 method_cfg.extended_cfg.g,
                 intermethod_only=True,
                 object_vars_only=True
             )
-            total_intermethod_pairs.extend(intermethod_pairs)
+            total_intermethod_pairs.update(only_lines(intermethod_pairs))
         return total_intermethod_pairs
 
     def _calculate_intra_method(self):
-        total_intramethod_pairs = []
+        total_intramethod_pairs = set()
         for name, method_cfg in self.methods.items():
             intramethod_pairs = rd.definition_use_pairs(method_cfg.cfg.g)
-            total_intramethod_pairs.extend(intramethod_pairs)
+            total_intramethod_pairs.update(only_lines(intramethod_pairs))
         return total_intramethod_pairs
 
     def get_variables(self, line):
@@ -98,3 +98,7 @@ class ClassCFG(object):
             if variables is not None:
                 return variables
         return None
+
+
+def only_lines(s):
+    return {(pair.definition.line, pair.use.line) for pair in s}

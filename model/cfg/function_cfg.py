@@ -14,9 +14,7 @@ class FunctionCFG:
         self.pairs = pairs
         self.line_start = line_start
         self.line_end = line_end
-        definitions, uses = self.cfg.collect_definitions_and_uses(filter_self=filter_self)
-        self.definitions = definitions
-        self.uses = uses
+        self.definitions, self.uses = self.cfg.collect_definitions_and_uses(filter_self=filter_self)
         from coverage_metrics.branch_coverage import first_lines_of_branches
         self.branches = first_lines_of_branches(self.cfg.g)
 

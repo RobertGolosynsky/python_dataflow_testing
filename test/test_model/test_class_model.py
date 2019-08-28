@@ -15,7 +15,7 @@ class TestClassModel(unittest.TestCase):
         relative_path = "../../dataset/dictionary"
         cls.project = Project(os.path.join(THIS_DIR, relative_path))
 
-        cls.project_cfg = ProjectCFG.create(cls.project)
+        cls.project_cfg = ProjectCFG.create_with_project(cls.project)
 
         multi_dict_class_name = "MultiDict"
         multidict_cfg = None

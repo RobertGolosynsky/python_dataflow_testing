@@ -32,7 +32,7 @@ class TestTraceAnalyzer(unittest.TestCase):
         project_root = LINKED_LIST_ROOT
         trace_root = create_new_temp_dir()
         exclude_folders = ["venv"]
-        cfg = ProjectCFG(project_root, exclude_folders=exclude_folders)
+        cfg = ProjectCFG.create_from_path(project_root, exclude_folders=exclude_folders)
 
         thorough.run_tests(LINKED_LIST_ROOT, trace_root, exclude_folders)
 

@@ -14,7 +14,7 @@ class TestProjectCFG(unittest.TestCase):
         project_path = THIS_DIR / relative_path
         project = Project(project_path)
 
-        self.project_cfg = ProjectCFG.create(project)
+        self.project_cfg = ProjectCFG.create_with_project(project)
         self.ll_module_path = THIS_DIR / "../../dataset/linked_list/core/ll.py"
         self.ll_module_path = self.ll_module_path.resolve()
 

@@ -13,12 +13,12 @@ ASTROID_UTIL = PROJECT_PATH / "util" / "astroid_util.py"
 class TestThisProjectCFG(unittest.TestCase):
 
     def test_create_project_cfg(self):
-        project_cfg = ProjectCFG.create(PROJECT, use_cached_if_possible=False)
+        project_cfg = ProjectCFG.create_with_project(PROJECT)
         self.assertIsNotNone(project_cfg)
         self.assertIn(str(ASTROID_UTIL), project_cfg.module_cfgs.keys())
 
     def test_astroid_util_definitions_uses(self):
-        project_cfg = ProjectCFG.create(PROJECT, use_cached_if_possible=True)
+        project_cfg = ProjectCFG.create_with_project(PROJECT)
         line = 16
         defs, uses = project_cfg.get_variables(ASTROID_UTIL, line)
         self.assertIn("line", defs)
