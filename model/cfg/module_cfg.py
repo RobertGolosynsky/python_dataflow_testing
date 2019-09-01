@@ -1,4 +1,4 @@
-from model.cfg.class_cfg import ClassCFG
+from model.cfg.class_cfg import ClassCFG, only_lines
 from model.cfg.function_cfg import FunctionCFG
 import util.astroid_util as au
 
@@ -59,7 +59,7 @@ class ModuleCFG(object):
         for name, cls_cfg in self.class_cfgs.items():
             total_intramethod_pairs.update(cls_cfg.intramethod_pairs)
         for name, function_cfg in self.function_cfgs.items():
-            total_intramethod_pairs.update(function_cfg.pairs)
+            total_intramethod_pairs.update(only_lines(function_cfg.pairs))
         return total_intramethod_pairs
 
     def get_variables(self, line):

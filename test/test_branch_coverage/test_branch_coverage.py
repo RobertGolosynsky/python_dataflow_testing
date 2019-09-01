@@ -69,7 +69,7 @@ class TestBranchCoverage(unittest.TestCase):
         print_percent("Branches covered", total_exercised, ll_py_cfg.branches)
         not_exercised_branches = set(available_branches) - set(total_exercised)
         print("Not exercised branches total ({}): ".format(len(not_exercised_branches)), not_exercised_branches)
-        self.assertEqual(3, len(not_exercised_branches))
+        self.assertEqual(8, len(not_exercised_branches))
 
 
 def print_percent(text, given, total):

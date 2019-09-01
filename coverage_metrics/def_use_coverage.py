@@ -23,7 +23,7 @@ class DefUsePairsCoverage:
 
     def __init__(self, trace_root, project_root, exclude_folders=None, max_trace_size=None):
         self.project_cfg = ProjectCFG.create_from_path(project_root,
-                                                       exclude_folders=exclude_folders + ["test"],
+                                                       exclude_folders=exclude_folders,
                                                        use_cached_if_possible=True)
         self.max_trace_size = max_trace_size
         self.trace_root = trace_root

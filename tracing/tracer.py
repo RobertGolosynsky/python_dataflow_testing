@@ -25,6 +25,7 @@ class Tracer(object):
     trace_file_ext = "trace"
     scopes_file_ext = "scopes"
     files_index_file = "files_index.json"
+    failed_test_cases_file = "failed_cases.json"
     trace_folder = ".traces"
 
     def __init__(self, keep, exclude, trace_folder_parent="./"):
@@ -44,6 +45,7 @@ class Tracer(object):
         self.scope_stack.append(self.scope_counter)
 
         self.file_index = {}
+        self.failed_test_cases = []
         self.last_index = defaultdict(int)
 
         self.current_log_files = {}
@@ -56,9 +58,13 @@ class Tracer(object):
 
         os.makedirs(self.trace_folder, exist_ok=False)
 
-        idx_file = self._index_file_path()
+        idx_file_path = self._index_file_path()
 
-        self.index_file = open(idx_file, "w")
+        failed_test_cases_file_path = self._failed_test_cases_file_path()
+
+        self.failed_test_cases_file = open(failed_test_cases_file_path, "w")
+
+        self.index_file = open(idx_file_path, "w")
 
         self.fileNameHelper = matcher_ext.FileMatcher(self.keep_files, self.keep_dirs,
                                                       self.exclude_files, self.exclude_dirs)
@@ -68,6 +74,9 @@ class Tracer(object):
 
     def _index_file_path(self):
         return os.path.join(self.trace_folder, self.files_index_file)
+
+    def _failed_test_cases_file_path(self):
+        return os.path.join(self.trace_folder, self.failed_test_cases_file)
 
     def _trace_file_path(self, trace_name, file_under_trace):
         if isinstance(trace_name, TestCase):
@@ -124,6 +133,9 @@ class Tracer(object):
         sys.settrace(self.prev_trace_func)
         self.prev_trace_func = None
 
+    def mark_test_case_failed(self, test_case):
+        self.failed_test_cases.append(test_case)
+
     def fullstop(self):
         json.dump(
             {v: k for k, v in self.file_index.items()},
@@ -131,6 +143,13 @@ class Tracer(object):
             indent=2
         )
         self.index_file.close()
+
+        json.dump(
+            [case.to_folder_name() for case in self.failed_test_cases],
+            self.failed_test_cases_file,
+            indent=2
+        )
+        self.failed_test_cases_file.close()
 
         logger.debug("Tracer closed, file index saved to {p}", p=self._index_file_path())
 

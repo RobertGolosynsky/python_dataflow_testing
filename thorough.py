@@ -8,36 +8,50 @@ from coverage_metrics.def_use_coverage import DefUsePairsCoverage
 from coverage_metrics.statement_coverage import StatementCoverage
 from model.test_case import TestCase
 from test.test_tracer import create_new_temp_dir
-from tracing.tracer import Tracer
+from tracing.trace_reader import read_df, get_traces_for_tracee
+from tracing.tracer import Tracer, LINE_INDEX
 
 
 class MyPlugin:
     def __init__(self, tracer):
         self.tracer = tracer
 
-    def pytest_runtest_call(self, item):
-        rel_path, line, class_and_method = item.location
+    @staticmethod
+    def as_test_case(location):
+        rel_path, line, class_and_method = location
         cls = ""
         if "." in class_and_method:
             cls, method = class_and_method.split(".")
         else:
             method = class_and_method
-        test_case = TestCase(rel_path, cls, method)
+        return TestCase(rel_path, cls, method)
+
+    def pytest_runtest_call(self, item):
+        test_case = self.as_test_case(item.location)
         logger.info("Running test case {case}", case=test_case)
         self.tracer.start(trace_name=test_case)
 
     def pytest_runtest_teardown(self, item):
         self.tracer.stop()
 
+    def pytest_runtest_logreport(self, report):
+        if report.when == "call" and report.outcome == 'failed':
+            test_case = self.as_test_case(report.location)
+            self.tracer.mark_test_case_failed(test_case)
+    # tests/test_list.py::LinkedListTest::test_append_on_removed' when='call' outcome='failed'>
+
 
 def run_tests(project_root, trace_root,
-              exclude_folders=None,
+              exclude_folders_collection=None,
+              exclude_folders_tracing=None,
               show_time_per_test=True,
               deselect_tests=None
               ):
-    if not exclude_folders:
-        exclude_folders = []
-    ignore_dirs_expanded = [str((Path(project_root) / d).resolve()) for d in exclude_folders]
+    if not exclude_folders_collection:
+        exclude_folders_collection = []
+    if not exclude_folders_tracing:
+        exclude_folders_tracing = []
+    ignore_dirs_expanded = [str((Path(project_root) / d).resolve()) for d in exclude_folders_tracing]
     t = Tracer(
         [
             str(project_root),
@@ -47,7 +61,9 @@ def run_tests(project_root, trace_root,
     )
 
     pytest_params = []
-    pytest_params += ["--ignore=" + d for d in exclude_folders]
+    pytest_params += ["-s"]
+
+    pytest_params += ["--ignore=" + d for d in exclude_folders_collection]
 
     if show_time_per_test:
         pytest_params.append("--durations=0")
@@ -66,18 +82,20 @@ def run_tests(project_root, trace_root,
 
 
 if __name__ == "__main__":
-    # trace_root = create_new_temp_dir()
-    trace_root = "/tmp/thorough/2019-08-28_02-17-10-800489/"
+    # TODO: add sys.agrv parsing and -help
+
+    trace_root = create_new_temp_dir()
     project_root = str(Path("").resolve())
     exclude_folders = ["dataset", "venv"]
-    # run_tests(project_root, trace_root,
-    #           exclude_folders=exclude_folders,
-    #           deselect_tests=[
-    #               ""
-    #           ]
-    #
-    #           )
-    coverage_exclude = exclude_folders+["test"]
+    run_tests(project_root, trace_root,
+              exclude_folders_collection=exclude_folders,
+              exclude_folders_tracing=exclude_folders + ["tests"],
+              deselect_tests=[
+                  "-"
+              ]
+
+              )
+    coverage_exclude = exclude_folders
 
     import pandas as pd
 
@@ -86,10 +104,42 @@ if __name__ == "__main__":
     max_size = 100
     stcoverage = StatementCoverage(trace_root, project_root, exclude_folders=coverage_exclude, max_trace_size=max_size)
     brcoverage = BranchCoverage(trace_root, project_root, exclude_folders=coverage_exclude, max_trace_size=max_size)
-    ducoverage = DefUsePairsCoverage(trace_root, project_root, exclude_folders=coverage_exclude, max_trace_size=max_size)
+    ducoverage = DefUsePairsCoverage(trace_root, project_root, exclude_folders=coverage_exclude,
+                                     max_trace_size=max_size)
     streport = stcoverage.report()
     brreport = brcoverage.report()
     dureport = ducoverage.report()
     merged_report: pd.DataFrame = pd.concat([streport, brreport, dureport], axis=1)
     merged_report = merged_report[pd.notnull(merged_report['StCov'])]
+    print("Report:")
     print(merged_report)
+
+    debug = True
+    if debug:
+        pairs = ducoverage.collect_pairs()
+        grouped_by_module = ducoverage.group_items_by_key(pairs, key="module_under_test")
+        file_index = ducoverage.files_index
+        for module_index in grouped_by_module:
+            module_path = file_index[module_index]
+            module_cfg = ducoverage.project_cfg.module_cfgs[module_path]
+            traces = get_traces_for_tracee(trace_root, module_index)
+            print(" " * 2, "Intramethod pairs found:", module_cfg.intramethod_pairs)
+            print(" " * 2, "Intermethod pairs found:", module_cfg.intermethod_pairs)
+            print(" " * 2, "Interclass pair found:", module_cfg.interclass_pairs)
+
+            print("Module under test: {}".format(module_path))
+            for test_case_result in grouped_by_module[module_index]:
+                # p = [path for tc, path in traces if tc == test_case_result.test_case.to_folder_name()][0]
+                # import numpy as np
+                # module_source = open(module_path).readlines()
+                # with np.printoptions(precision=3, linewidth=100):
+                #     t = read_df(p)[0]
+                #     for row in t:
+                #         line = row[LINE_INDEX]
+                #         print(row, end="")
+                #         print(module_source[line-1])
+
+                print(" " * 4, "Test case:", test_case_result.test_case)
+                print(" " * 8, "Intramethod pairs covered:", test_case_result.intramethod_pairs)
+                print(" " * 8, "Intermethod pairs covered:", test_case_result.intermethod_pairs)
+                print(" " * 8, "Interclass pair covered:", test_case_result.interclass_pairs)

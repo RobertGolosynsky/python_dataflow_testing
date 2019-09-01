@@ -7,10 +7,11 @@ class Node(object):
 
 class LinkedList(object):
 
-    def __init__(self, seq=[]):
+    def __init__(self, seq=None):
         self.root = None
-        for el in seq:
-            self.append(el)
+        if isinstance(seq, list):
+            for el in seq:
+                self.append(el)
 
     def _last_node(self):
         if not self.root:
@@ -78,24 +79,24 @@ class LinkedList(object):
             node = node.next
         return l
 
-#
-# def some_annotation(func):
-#     def some_wrapper(*args, **kwargs):
-#         return func(*args, **kwargs)
-#
-#     return some_wrapper
-#
-#
-# @some_annotation
-# def check(a, b, c, *args, **kwargs):
-#     print(a, b, c, args, kwargs)
+
+def some_annotation(func):
+    def some_wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    return some_wrapper
 
 
-# def print_list(l: LinkedList, every_x_el):
-#     res = []
-#     for i in range(l.len()):
-#         if i % every_x_el == 0:
-#             res = l.get(i)
-#     while len(res) < 10:
-#         res.append(0)
-#     return res
+@some_annotation
+def check(a, b, c, *args, **kwargs):
+    print(a, b, c, args, kwargs)
+
+
+def print_list(l: LinkedList, every_x_el):
+    res = []
+    for i in range(l.len()):
+        if i % every_x_el == 0:
+            res = l.get(i)
+    while len(res) < 10:
+        res.append(0)
+    return res

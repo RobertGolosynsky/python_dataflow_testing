@@ -34,7 +34,7 @@ class TestMethodCFGIntermethodPairs(unittest.TestCase):
                                                          ic2_method_cfg.extended_cfg.g
                                                          )
         self.assertEqual(1, len(inter_class_pairs))
-        self.assertEqual(3, len(inter_method_pairs))
+        self.assertEqual(2, len(inter_method_pairs))
         self.assertEqual(2, len(set(inter_method_pairs) - set(inter_class_pairs)))
 
     def test_intermethod_in_init_linked_list(self):
@@ -47,4 +47,4 @@ class TestMethodCFGIntermethodPairs(unittest.TestCase):
                                                      object_vars_only=True
                                                      )
 
-        self.assertEqual(6, len(inter_method_pairs))
+        self.assertEqual(3, len(inter_method_pairs))

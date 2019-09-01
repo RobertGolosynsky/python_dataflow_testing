@@ -29,7 +29,7 @@ class VarToInt:
 
     def as_int(self, var_name):
         as_int = self.idx.get(var_name, None)
-        if as_int:
+        if as_int is not None:
             return as_int
         else:
             if var_name.startswith("self."):

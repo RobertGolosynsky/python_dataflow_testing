@@ -34,6 +34,12 @@ def read_files_index(trace_root):
         return {int(k): v for k, v in file_dict.items()}
 
 
+def read_failed_test_cases(trace_root):
+    path = os.path.join(trace_root, Tracer.trace_folder, Tracer.failed_test_cases_file)
+    with open(path) as f:
+        return json.load(f)
+
+
 def read_df(f, cut=-1, max_size_mb=None):
     logger.info("Reading trace {f}", f=f)
     file_size = os.stat(f).st_size // (1024 * 1024)
@@ -43,11 +49,13 @@ def read_df(f, cut=-1, max_size_mb=None):
         f,
         header=None,
         delimiter=",",
-        dtype={IDX_INDEX: "int64",
-               FILE_INDEX: "int16",
-               LINE_INDEX: "int16",
-               SELF_INDEX: "int64",
-               SCOPE_INDEX: "int64"},
+        # dtype={
+        #     # IDX_INDEX: "int64",
+        #     FILE_INDEX: "int16",
+        #     LINE_INDEX: "int16",
+        #     SELF_INDEX: "int",
+        #     SCOPE_INDEX: "int64"
+        # },
         low_memory=True
     ).values
 

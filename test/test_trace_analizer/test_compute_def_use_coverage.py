@@ -88,7 +88,7 @@ class TestComputeCoverage(unittest.TestCase):
         print("Not exercised pairs total ({}): ".format(len(not_exercised_pairs)), not_exercised_pairs)
         print("total intermethod", ll_py_cfg.intermethod_pairs)
 
-        self.assertEqual(3, len(not_exercised_pairs))
+        self.assertEqual(16, len(not_exercised_pairs))
 
 
 def print_percent(text, given, total):
