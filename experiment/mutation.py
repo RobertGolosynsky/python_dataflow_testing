@@ -1,3 +1,4 @@
+import time
 import os
 import sys
 
@@ -8,6 +9,10 @@ from pprint import pprint
 from glob2 import glob
 from mutmut.__main__ import time_test_suite, python_source_files, add_mutations_by_file, Config, run_mutation_tests
 from mutmut.cache import update_line_numbers, filename_and_mutation_id_from_pk, hash_of_tests
+
+
+def current_time_millis_hex():
+    return hex(int(round(time.time() * 1000)))
 
 
 class MutationTestingResult:
@@ -25,7 +30,8 @@ def main(path_to_module_under_test, runner, tests_dir,
          swallow_output=True, dict_synonyms="", cache_only=False,
          pre_mutation=None, post_mutation=None, paths_to_exclude=None,
          backup=False,
-         argument=None
+         argument=None,
+         no_cache=False
          ):
     # """return exit code, after performing an mutation test run.
     #
@@ -181,6 +187,7 @@ def main(path_to_module_under_test, runner, tests_dir,
 
     # print()
     # print('2. Checking mutants')
+
     config = Config(
         swallow_output=not swallow_output,
         test_command=runner,
@@ -192,12 +199,13 @@ def main(path_to_module_under_test, runner, tests_dir,
         using_testmon=using_testmon,
         cache_only=cache_only,
         tests_dirs=tests_dirs,
-        hash_of_tests=hash_of_tests(tests_dirs),
+        hash_of_tests=current_time_millis_hex() if no_cache else hash_of_tests(tests_dirs),
         test_time_multiplier=test_time_multiplier,
         test_time_base=test_time_base,
         pre_mutation=pre_mutation,
-        post_mutation=post_mutation,
+        post_mutation=post_mutation
     )
+    print(hash_of_tests(tests_dirs))
 
     try:
         run_mutation_tests(config=config, mutations_by_file=mutations_by_file)
@@ -249,7 +257,7 @@ class PrintSilencer:
             sys.stdout = self.out
 
 
-def run_mutation(project_root, module_under_test, test_cases, tests_root):
+def run_mutation(project_root, module_under_test, test_cases, tests_root, no_cache=False):
     project_root = Path(project_root)
     module_under_test = Path(module_under_test)
     tests_root = Path(tests_root)
@@ -265,9 +273,9 @@ def run_mutation(project_root, module_under_test, test_cases, tests_root):
 
     runner = "python3 -m pytest -x " + " ".join(test_cases)
     silencer = PrintSilencer()
-    silencer.block_print()
-    res = main(str(module_under_test), runner, str(tests_root))
-    silencer.revert_print()
+    # silencer.block_print()
+    res = main(str(module_under_test), runner, str(tests_root), no_cache=no_cache)
+    # silencer.revert_print()
 
     os.chdir(save_working_dir)
 
