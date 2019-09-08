@@ -1,6 +1,8 @@
 from collections import defaultdict
 from typing import List
 
+from loguru import logger
+
 import dataflow.inter_class as ic
 import dataflow.reaching_definitions as rd
 from itertools import product
@@ -14,6 +16,7 @@ from util.astroid_util import Function
 class ClassCFG(object):
 
     def __init__(self, class_name, methods: List[Function], calls):
+        logger.debug("Creating class cfg for class {c}", c=class_name)
         self.class_name = class_name
 
         self.call_dict = defaultdict(list)
@@ -27,7 +30,7 @@ class ClassCFG(object):
         if methods:
             self.start_line = methods[0].first_line
             self.end_line = 0
-
+        logger.debug("Creating function cfg for methods of {c}", c=class_name)
         for f in methods:
             if f.first_line < self.start_line:
                 self.start_line = f.first_line
@@ -41,6 +44,7 @@ class ClassCFG(object):
             if m:
                 self.methods[m_name] = m
         simple_method_cfgs = {m_name: function_cfg.cfg for m_name, function_cfg in self.methods.items()}
+        logger.debug("Creating extended function cfg for methods of {c}", c=class_name)
         for function_cfg in self.methods.values():
             function_cfg.extend_cfg(simple_method_cfgs)
         # self.super_cfg = sg.create_super_cfg(self.methods)
@@ -56,7 +60,10 @@ class ClassCFG(object):
             self.definitions.update(f_cfg.definitions)
             self.uses.update(f_cfg.uses)
 
+        logger.debug("Done creating class cfg for class {c}", c=class_name)
+
     def _calculate_interclass(self):
+        logger.debug("Finding inter class pairs in class {c}", c=self.class_name)
         without_init = {n: o for n, o in self.methods.items() if not n.startswith("_")}
         public_methods = without_init.copy()
         if "__init__" in self.methods:
@@ -66,10 +73,10 @@ class ClassCFG(object):
         for (n1, m1), (n2, m2) in product(public_methods.items(), without_init.items()):
             pairs = ic.inter_class_def_use_pairs_cfg(m1.extended_cfg, m2.extended_cfg)
             interclass_pairs.update(only_lines(pairs))
-
         return interclass_pairs
 
     def _calculate_intermethod(self):
+        logger.debug("Finding inter method pairs in class {c}", c=self.class_name)
         total_intermethod_pairs = set()
         for name, method_cfg in self.methods.items():
             intermethod_pairs = rd.definition_use_pairs(
@@ -81,6 +88,7 @@ class ClassCFG(object):
         return total_intermethod_pairs
 
     def _calculate_intra_method(self):
+        logger.debug("Finding intra method pairs in class {c}", c=self.class_name)
         total_intramethod_pairs = set()
         for name, method_cfg in self.methods.items():
             intramethod_pairs = rd.definition_use_pairs(method_cfg.cfg.g)

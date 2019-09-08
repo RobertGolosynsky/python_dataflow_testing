@@ -29,6 +29,8 @@ class ProjectCFG:
     def create_from_path(project_path, exclude_folders=None, exclude_files=None, use_cached_if_possible=True):
         module_paths = find_files(project_path, ".py", exclude_folders, exclude_files)
         project_changed = ProjectCFG._check_project_changed(project_path, module_paths)
+        if project_changed:
+            logger.debug("Project changed so we have to recreate the project cfg")
         if use_cached_if_possible and not project_changed:
             p = ProjectCFG._load(project_path)
             if p:

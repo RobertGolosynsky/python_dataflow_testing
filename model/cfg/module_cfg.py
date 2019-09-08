@@ -1,10 +1,11 @@
 from model.cfg.class_cfg import ClassCFG, only_lines
 from model.cfg.function_cfg import FunctionCFG
 import util.astroid_util as au
-
+from loguru import logger
 
 class ModuleCFG(object):
     def __init__(self, module_path):
+        logger.debug("Creating module cfg for module {m}", m=module_path)
         self.module_path = module_path
         self.function_cfgs = {}
         self.class_cfgs = {}
@@ -13,14 +14,14 @@ class ModuleCFG(object):
 
         self.definitions = {}
         self.uses = {}
-
+        logger.debug("Adding classes of the module")
         for cls_name, methods in clss.items():
             cls_cfg = ClassCFG(cls_name, methods, calls)
             self.class_cfgs[cls_name] = cls_cfg
 
             self.definitions.update(cls_cfg.definitions)
             self.uses.update(cls_cfg.uses)
-
+        logger.debug("Adding functions of the module")
         for f in fns:
             fn_name = f.func.__name__
             func_cfg = FunctionCFG.create(f)
@@ -33,6 +34,7 @@ class ModuleCFG(object):
         self.intermethod_pairs = self._calculate_intermethod()
         self.interclass_pairs = self._calculate_interclass()
 
+        logger.debug("Finding branching points of the module")
         self.branches = set()
         for cls_cfg in self.class_cfgs.values():
             for func_cfg in cls_cfg.methods.values():
@@ -41,13 +43,17 @@ class ModuleCFG(object):
         for func_cfg in self.function_cfgs.values():
             self.branches |= func_cfg.branches
 
+        logger.debug("Done creating module cfg for module {m}", m=self.module_path)
+
     def _calculate_interclass(self):
+        logger.debug("Finding inter class pairs in module {m}", m=self.module_path)
         interclass_pairs = set()
         for name, cls_cfg in self.class_cfgs.items():
             interclass_pairs.update(cls_cfg.interclass_pairs)
         return interclass_pairs
 
     def _calculate_intermethod(self):
+        logger.debug("Finding inter method pairs in module {m}", m=self.module_path)
         total_intermethod_pairs = set()
 
         for name, cls_cfg in self.class_cfgs.items():
@@ -55,6 +61,7 @@ class ModuleCFG(object):
         return total_intermethod_pairs
 
     def _calculate_intra_method(self):
+        logger.debug("Finding intra method pairs in module {m}", m=self.module_path)
         total_intramethod_pairs = set()
         for name, cls_cfg in self.class_cfgs.items():
             total_intramethod_pairs.update(cls_cfg.intramethod_pairs)
