@@ -2,16 +2,20 @@ import os
 from pathlib import Path
 import pandas as pd
 
+from coverage_metrics.coverage_interface import Coverage
 from coverage_metrics.util import percent
 from graphs.keys import LINE_KEY
 from model.cfg.project_cfg import ProjectCFG
+from model.test_case import TestCase
 from tracing.trace_reader import read_files_index, get_traces_for_tracee, read_df
 from tracing.tracer import LINE_INDEX
 
 from loguru import logger
 
+from util.misc import key_where
 
-class StatementCoverage:
+
+class StatementCoverage(Coverage):
     file_name_col = "Fname"
     file_path_col = "Fpath"
     coverage_col = "StCov"
@@ -59,34 +63,49 @@ class StatementCoverage:
 
     def covered_statements(self):
         logger.info("Counting covered statements per module and test case")
-        trace_root = Path(self.trace_root)
         data = {}
 
         for tracee_index in self.files_index:
-
-            covered_lines = {}
-
-            for test_case, trace_file_path in get_traces_for_tracee(trace_root, tracee_index):
-                df, size = read_df(trace_file_path, max_size_mb=self.max_trace_size)
-                if df is not None:
-                    lines = df.T[LINE_INDEX]  # TODO: mb move line index to trace reader?
-                    covered_lines[test_case] = set(lines)
-                else:
-                    covered_lines[test_case] = set()
-            data[tracee_index] = covered_lines
+            data[tracee_index] = self.covered_statements_of(tracee_index)
 
         return data
+
+    def covered_statements_of(self, tracee_index):
+        trace_root = Path(self.trace_root)
+        covered_lines = {}
+        for test_case, trace_file_path in get_traces_for_tracee(trace_root, tracee_index):
+            test_case = TestCase.from_folder_name(test_case)
+            df, size = read_df(trace_file_path, max_size_mb=self.max_trace_size)
+            if df is not None:
+                lines = df.T[LINE_INDEX]  # TODO: mb move line index to trace reader?
+                covered_lines[test_case] = set(lines)
+            else:
+                covered_lines[test_case] = set()
+        return covered_lines
 
     def _lines_per_module(self):
         logger.info("Counting lines per module")
         statements_per_module = {}
-        for module_path, module_cfg in self.project_cfg.module_cfgs.items():
-            statements = set()
-            for func_name, func_cfg in module_cfg.walk():
-                g = func_cfg.cfg.g
-                for node, data in g.nodes(data=True):
-                    line = data.get(LINE_KEY, -1)
-                    if line > 0:
-                        statements.add(line)
-            statements_per_module[module_path] = statements
+        for module_path in self.project_cfg.module_cfgs:
+            statements_per_module[module_path] = self.total_items_of(module_path)
         return statements_per_module
+
+    # TODO: can be moved into ModuleCFG
+    @staticmethod
+    def lines_in_module(module_cfg):
+        statements = set()
+        for func_name, func_cfg in module_cfg.walk():
+            g = func_cfg.cfg.g
+            for node, data in g.nodes(data=True):
+                line = data.get(LINE_KEY, -1)
+                if line > 0:
+                    statements.add(line)
+        return statements
+
+    def total_items_of(self, module_path, of_type=None):
+        module_cfg = self.project_cfg.module_cfgs[module_path]
+        return self.lines_in_module(module_cfg)
+
+    def covered_items_of(self, module_path, of_type=None) -> dict:
+        tracee_index = key_where(self.files_index, value=module_path)
+        return self.covered_statements_of(tracee_index)

@@ -1,20 +1,23 @@
 from collections import namedtuple, defaultdict
 import pandas as pd
 
+from coverage_metrics.coverage_interface import Coverage
 from coverage_metrics.util import percent
+from coverage_metrics.coverage_metric_enum import CoverageMetric
 from model.cfg.project_cfg import ProjectCFG
+from model.test_case import TestCase
 from tracing.cpp_tracing.analize import analyze_trace_w_index
 from tracing.cpp_tracing.intermethod_interclass_anaize import analyze
 from tracing.index_factory import VarIndexFactory
 from tracing.trace_reader import read_files_index, read_df, get_trace_files, \
-    trace_path_to_tracee_index_and_test_case, read_scopes_for_trace_file
+    trace_path_to_tracee_index_and_test_case, read_scopes_for_trace_file, get_traces_for_tracee
 from util.misc import key_where
 
 row = namedtuple("row", ["test_case", "module_under_test",
                          "intramethod_pairs", "intermethod_pairs", "interclass_pairs"])
 
 
-class DefUsePairsCoverage:
+class DefUsePairsCoverage(Coverage):
     file_name_col = "File name"
     file_path_col = "File path"
     m_col = "M {}"
@@ -122,6 +125,68 @@ class DefUsePairsCoverage:
             k = key(item)
             d[k].append(item)
         return d
+
+    def total_items_of(self, module_path, of_type=CoverageMetric.ALL_PAIRS):
+        module = self.project_cfg.module_cfgs.get(module_path)
+        if not module:
+            return []
+        if of_type == CoverageMetric.M_ONLY:
+            return module.intramethod_pairs
+        elif of_type == CoverageMetric.IM_ONLY:
+            return module.intermethod_pairs
+        elif of_type == CoverageMetric.IC_ONLY:
+            return module.interclass_pairs
+        elif of_type == CoverageMetric.M_AND_IM:
+            return module.intramethod_pairs | module.intermethod_pairs
+        elif of_type == CoverageMetric.M_AND_IC:
+            return module.intramethod_pairs | module.interclass_pairs
+        elif of_type == CoverageMetric.IM_AND_IC:
+            return module.intermethod_pairs | module.interclass_pairs
+        elif of_type == CoverageMetric.ALL_PAIRS:
+            return module.intramethod_pairs | module.intermethod_pairs | module.interclass_pairs
+        else:
+            raise ValueError("Unknown coverage metric {} in parameter 'of_type'".format(of_type))
+
+    def covered_items_of(self, module_path, of_type=CoverageMetric.ALL_PAIRS) -> dict:
+        tracee_index = key_where(self.files_index, value=module_path)
+        report = {}
+        for test_case, trace_file_path in get_traces_for_tracee(self.trace_root, tracee_index):
+            test_case = TestCase.from_folder_name(test_case)
+            np_array, fsize = read_df(trace_file_path, max_size_mb=self.max_trace_size)
+            if np_array is None:
+                continue
+
+            scopes = read_scopes_for_trace_file(trace_file_path)
+            if not scopes:
+                continue
+
+            if of_type == CoverageMetric.M_ONLY:
+                mp = analyze_trace_w_index(trace_file_path, self.cppvi)
+                report[test_case] = rename_vars(mp)
+            elif of_type == CoverageMetric.IM_ONLY:
+                imp, icp = analyze(trace_file_path, self.vi, scopes)
+                report[test_case] = rename_vars(imp)
+            elif of_type == CoverageMetric.IC_ONLY:
+                imp, icp = analyze(trace_file_path, self.vi, scopes)
+                report[test_case] = rename_vars(icp)
+            elif of_type == CoverageMetric.M_AND_IM:
+                mp = analyze_trace_w_index(trace_file_path, self.cppvi)
+                imp, icp = analyze(trace_file_path, self.vi, scopes)
+                report[test_case] = rename_vars(mp) | rename_vars(imp)
+            elif of_type == CoverageMetric.M_AND_IC:
+                mp = analyze_trace_w_index(trace_file_path, self.cppvi)
+                imp, icp = analyze(trace_file_path, self.vi, scopes)
+                report[test_case] = rename_vars(mp) | rename_vars(icp)
+            elif of_type == CoverageMetric.IM_AND_IC:
+                imp, icp = analyze(trace_file_path, self.vi, scopes)
+                report[test_case] = rename_vars(imp) | rename_vars(icp)
+            elif of_type == CoverageMetric.ALL_PAIRS:
+                mp = analyze_trace_w_index(trace_file_path, self.cppvi)
+                imp, icp = analyze(trace_file_path, self.vi, scopes)
+                report[test_case] = rename_vars(mp) | rename_vars(imp) | rename_vars(icp)
+            else:
+                raise ValueError("Unknown coverage metric {} in parameter 'of_type'".format(of_type))
+        return report
 
 
 def rename_vars(s):
