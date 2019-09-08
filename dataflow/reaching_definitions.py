@@ -61,9 +61,9 @@ def definition_use_pairs(cfg: nx.DiGraph,
                          intermethod_only=False,
                          object_vars_only=False):
     pairs = []
-    reaching_deffs = _reaching_definitions(cfg,
-                                           initial_set=initial_set,
-                                           object_vars_only=object_vars_only)
+    reaching_deffs = reaching_definitions(cfg,
+                                          initial_set=initial_set,
+                                          object_vars_only=object_vars_only)
 
     # for node in sorted(reaching_deffs):
     #     print("node:",node," -> "," ".join(str(var) for var in reaching_deffs[node]))
@@ -98,7 +98,7 @@ def is_return_edge(data):
     return RETURN_KEY in data
 
 
-def _reaching_definitions(cfg: nx.DiGraph, initial_set=None, object_vars_only=False):
+def reaching_definitions(cfg: nx.DiGraph, initial_set=None, object_vars_only=False):
     reach_out = defaultdict(set)
     working_list = set(cfg.nodes())
     while len(working_list) > 0:

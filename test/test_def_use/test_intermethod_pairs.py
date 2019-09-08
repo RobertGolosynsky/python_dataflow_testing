@@ -30,8 +30,8 @@ class TestMethodCFGIntermethodPairs(unittest.TestCase):
                                                      object_vars_only=True,
                                                      intermethod_only=True
                                                      )
-        inter_class_pairs = ic.inter_class_def_use_pairs(ic1_method_cfg.extended_cfg.g,
-                                                         ic2_method_cfg.extended_cfg.g
+        inter_class_pairs = ic.inter_class_def_use_pairs_cfg(ic1_method_cfg.extended_cfg,
+                                                         ic2_method_cfg.extended_cfg
                                                          )
         self.assertEqual(1, len(inter_class_pairs))
         self.assertEqual(2, len(inter_method_pairs))

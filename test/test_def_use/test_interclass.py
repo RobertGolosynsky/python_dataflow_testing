@@ -35,7 +35,7 @@ class TestInterClass(unittest.TestCase):
         cfg1 = du.try_create_cfg_with_definitions_and_uses(func1.func, func1.first_line, func1.argument_names)
         cfg2 = du.try_create_cfg_with_definitions_and_uses(func2.func, func2.first_line, func2.argument_names)
 
-        pairs = ic.inter_class_def_use_pairs(cfg1.g, cfg2.g)
+        pairs = ic.inter_class_def_use_pairs_cfg(cfg1, cfg2)
         self.assertEqual(len(pairs), 1)
 
     def test_def_use_inter_class_2(self):
@@ -53,6 +53,6 @@ class TestInterClass(unittest.TestCase):
         cfg1 = du.try_create_cfg_with_definitions_and_uses(func1.func, func1.first_line, func1.argument_names)
         cfg2 = du.try_create_cfg_with_definitions_and_uses(func2.func, func2.first_line, func2.argument_names)
 
-        pairs = ic.inter_class_def_use_pairs(cfg1.g, cfg2.g)
+        pairs = ic.inter_class_def_use_pairs_cfg(cfg1, cfg2)
         self.assertEqual(len(pairs), 2)
 
