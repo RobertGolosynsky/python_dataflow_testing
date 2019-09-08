@@ -25,6 +25,9 @@ class TestCase:
         class_name, function_name = suffix.split(cls.after_class_sep)
         return TestCase(path, class_name, function_name)
 
+    def to_node_id(self):
+        return self.path+"::"+self.class_name+"::"+self.function_name
+
     def __hash__(self):
         return hash(self.path) + hash(self.class_name) + hash(self.function_name)
 
