@@ -92,14 +92,19 @@ def get_test_cases(trace_root):
     return next(os.walk(path))[1]
 
 
-def get_traces_for_tracee(trace_root, file_index):
+def get_traces_for_tracee(trace_root, file_index, test_cases=None):
+
     file_name = str(file_index) + os.path.extsep + Tracer.trace_file_ext
     root = Path(trace_root) / Tracer.trace_folder
     paths = []
     for test_case in get_test_cases(trace_root):
+        if test_cases is not None:
+            if test_case not in test_cases:
+                continue
         trace_file_path = root / test_case / file_name
         if trace_file_path.is_file():
             paths.append((test_case, trace_file_path))
+
     return paths
 
 

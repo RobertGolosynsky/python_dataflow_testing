@@ -70,10 +70,10 @@ class StatementCoverage(Coverage):
 
         return data
 
-    def covered_statements_of(self, tracee_index):
+    def covered_statements_of(self, tracee_index, test_cases=None):
         trace_root = Path(self.trace_root)
         covered_lines = {}
-        for test_case, trace_file_path in get_traces_for_tracee(trace_root, tracee_index):
+        for test_case, trace_file_path in get_traces_for_tracee(trace_root, tracee_index, test_cases=test_cases):
             test_case = TestCase.from_folder_name(test_case)
             df, size = read_df(trace_file_path, max_size_mb=self.max_trace_size)
             if df is not None:
@@ -106,6 +106,6 @@ class StatementCoverage(Coverage):
         module_cfg = self.project_cfg.module_cfgs[module_path]
         return self.lines_in_module(module_cfg)
 
-    def covered_items_of(self, module_path, of_type=None) -> dict:
+    def covered_items_of(self, module_path, of_type=None, test_cases=None) -> dict:
         tracee_index = key_where(self.files_index, value=module_path)
-        return self.covered_statements_of(tracee_index)
+        return self.covered_statements_of(tracee_index, test_cases=test_cases)

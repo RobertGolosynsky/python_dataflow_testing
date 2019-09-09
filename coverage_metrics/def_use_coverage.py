@@ -147,10 +147,10 @@ class DefUsePairsCoverage(Coverage):
         else:
             raise ValueError("Unknown coverage metric {} in parameter 'of_type'".format(of_type))
 
-    def covered_items_of(self, module_path, of_type=CoverageMetric.ALL_PAIRS) -> dict:
+    def covered_items_of(self, module_path, of_type=CoverageMetric.ALL_PAIRS, test_cases=None) -> dict:
         tracee_index = key_where(self.files_index, value=module_path)
         report = {}
-        for test_case, trace_file_path in get_traces_for_tracee(self.trace_root, tracee_index):
+        for test_case, trace_file_path in get_traces_for_tracee(self.trace_root, tracee_index, test_cases=test_cases):
             test_case = TestCase.from_folder_name(test_case)
             np_array, fsize = read_df(trace_file_path, max_size_mb=self.max_trace_size)
             if np_array is None:

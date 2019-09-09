@@ -100,14 +100,15 @@ class BranchCoverage(StatementCoverage):
 
         return branches
 
-    def covered_items_of(self, module_path, of_type=None) -> dict:
+    def covered_items_of(self, module_path, of_type=None, test_cases=None) -> dict:
         tracee_index = key_where(self.files_index, value=module_path)
         trace_root = Path(self.trace_root)
         branches = self.total_items_of(module_path)
 
         covered_branches_per_test_case = {}
 
-        for test_case, trace_file_path in get_traces_for_tracee(trace_root, tracee_index):
+
+        for test_case, trace_file_path in get_traces_for_tracee(trace_root, tracee_index, test_cases=test_cases):
             test_case = TestCase.from_folder_name(test_case)
             df, size = read_df(trace_file_path, max_size_mb=self.max_trace_size)
             if df is not None:
