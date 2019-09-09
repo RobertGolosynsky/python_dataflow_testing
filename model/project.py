@@ -5,6 +5,7 @@ import urllib.request
 import venv
 import pathlib
 import astroid
+from loguru import logger
 
 import util.astroid_util as au
 from util.find import find_files
@@ -103,7 +104,7 @@ class Project(object):
         if self.has_venv():
             self.venv_activated = True
             self._save_params()
-            activator_path = self.create_activator_location() # Looted from virtualenv; should not require modification, since it's defined relatively
+            activator_path = self.create_activator_location()  # Looted from virtualenv; should not require modification, since it's defined relatively
             with open(activator_path) as f:
                 exec(f.read(), {'__file__': activator_path})
             # print("Using this python environment:", os.path.dirname(sys.executable))
@@ -124,7 +125,7 @@ class Project(object):
 
         out, err = process.communicate()
         errcode = process.returncode
-        print(out)
+        logger.info("pip3 output \n {out}", out=out)
         if not errcode == 0:
             raise SystemError(err)
         else:
