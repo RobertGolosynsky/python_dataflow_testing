@@ -144,5 +144,10 @@ cpp/du_pairs/\.rendered\.def_use_pairs_ext\.cpp
 
 *.mutmut-cache
 
-!dataset/linked_list
-!dataset/linked_list_mutmut
+dataset/
+!dataset/linked_list/
+!dataset/linked_list_mutmut/
+coverage_metrics/cached/
+experiment/cached/
+tracing/cpp_tracing/cached_im_ic/
+tracing/cpp_tracing/cached_m/
