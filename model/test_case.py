@@ -3,10 +3,10 @@ from pprint import pformat
 
 
 class TestCase:
-
     after_path_sep = "@"
     after_class_sep = "+"
     path_sep = "-"
+    node_id_sep = "::"
 
     def __init__(self, path, class_name, function_name):
         self.path = path
@@ -25,8 +25,12 @@ class TestCase:
         class_name, function_name = suffix.split(cls.after_class_sep)
         return TestCase(path, class_name, function_name)
 
+    @classmethod
+    def from_node_id(cls, node_id):
+        return TestCase(*node_id.split(cls.node_id_sep))
+
     def to_node_id(self):
-        return self.path+"::"+self.class_name+"::"+self.function_name
+        return self.node_id_sep.join([self.path, self.class_name, self.function_name])
 
     def __hash__(self):
         return hash(self.path) + hash(self.class_name) + hash(self.function_name)
@@ -38,4 +42,3 @@ class TestCase:
 
     def __repr__(self) -> str:
         return self.to_folder_name()
-
