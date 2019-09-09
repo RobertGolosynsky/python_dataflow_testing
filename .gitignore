@@ -143,3 +143,6 @@ expected_def_use/
 cpp/du_pairs/\.rendered\.def_use_pairs_ext\.cpp
 
 *.mutmut-cache
+
+!dataset/linked_list
+!dataset/linked_list_mutmut
