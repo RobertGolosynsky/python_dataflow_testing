@@ -6,39 +6,24 @@ import pytest
 from coverage_metrics.branch_coverage import BranchCoverage
 from coverage_metrics.def_use_coverage import DefUsePairsCoverage
 from coverage_metrics.statement_coverage import StatementCoverage
-from model.test_case import TestCase
 from test.test_tracer import create_new_temp_dir
-from tracing.trace_reader import read_df, get_traces_for_tracee
-from tracing.tracer import Tracer, LINE_INDEX
+from tracing.tracer import Tracer
 
 
 class MyPlugin:
     def __init__(self, tracer):
         self.tracer = tracer
 
-    @staticmethod
-    def as_test_case(location):
-        rel_path, line, class_and_method = location
-        cls = ""
-        if "." in class_and_method:
-            cls, method = class_and_method.split(".")
-        else:
-            method = class_and_method
-        return TestCase(rel_path, cls, method)
-
     def pytest_runtest_call(self, item):
-        test_case = self.as_test_case(item.location)
-        logger.info("Running test case {case}", case=test_case)
-        self.tracer.start(trace_name=test_case)
+        logger.info("Running test case {case}", case=item.nodeid)
+        self.tracer.start(trace_name=item.nodeid)
 
     def pytest_runtest_teardown(self, item):
         self.tracer.stop()
 
     def pytest_runtest_logreport(self, report):
         if report.when == "call" and report.outcome == 'failed':
-            test_case = self.as_test_case(report.location)
-            self.tracer.mark_test_case_failed(test_case)
-    # tests/test_list.py::LinkedListTest::test_append_on_removed' when='call' outcome='failed'>
+            self.tracer.mark_test_case_failed(report.nodeid)
 
 
 def run_tests(project_root, trace_root,
@@ -77,7 +62,7 @@ def run_tests(project_root, trace_root,
         plugins=[MyPlugin(tracer=t)],
     )
 
-    t.fullstop()
+    t.full_stop()
     os.chdir(current_working_dir)
 
 

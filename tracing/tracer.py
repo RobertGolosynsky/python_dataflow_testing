@@ -10,7 +10,7 @@ from cpp.cpp_import import load_cpp_extension
 
 import shutil
 
-from model.test_case import TestCase
+from tracing.string_to_int_index import StringToIntIndex
 
 matcher_ext = load_cpp_extension("matcher_ext")
 
@@ -24,7 +24,8 @@ SCOPE_INDEX = 4
 class Tracer(object):
     trace_file_ext = "trace"
     scopes_file_ext = "scopes"
-    files_index_file = "files_index.json"
+    trace_index_file_name = "files_index.json"
+    folder_index_file_name = "folder_index.json"
     failed_test_cases_file = "failed_cases.json"
     trace_folder = ".traces"
 
@@ -44,7 +45,6 @@ class Tracer(object):
         self.scope_counter = 0
         self.scope_stack.append(self.scope_counter)
 
-        self.file_index = {}
         self.failed_test_cases = []
         self.last_index = defaultdict(int)
 
@@ -58,13 +58,11 @@ class Tracer(object):
 
         os.makedirs(self.trace_folder, exist_ok=False)
 
-        idx_file_path = self._index_file_path()
+        self.file_index = StringToIntIndex()
+
+        self.folder_index = StringToIntIndex()
 
         failed_test_cases_file_path = self._failed_test_cases_file_path()
-
-        self.failed_test_cases_file = open(failed_test_cases_file_path, "w")
-
-        self.index_file = open(idx_file_path, "w")
 
         self.fileNameHelper = matcher_ext.FileMatcher(self.keep_files, self.keep_dirs,
                                                       self.exclude_files, self.exclude_dirs)
@@ -72,27 +70,27 @@ class Tracer(object):
         logger.info("Created Tracer object with logging to {trace_folder_parent}, {keep}, {exclude}",
                     trace_folder_parent=trace_folder_parent, keep=keep, exclude=exclude)
 
-    def _index_file_path(self):
-        return os.path.join(self.trace_folder, self.files_index_file)
+    def _trace_index_path(self):
+        return os.path.join(self.trace_folder, self.trace_index_file_name)
+
+    def _folder_index_path(self):
+        return os.path.join(self.trace_folder, self.folder_index_file_name)
 
     def _failed_test_cases_file_path(self):
         return os.path.join(self.trace_folder, self.failed_test_cases_file)
 
     def _trace_file_path(self, trace_name, file_under_trace):
-        if isinstance(trace_name, TestCase):
-            trace_name = trace_name.to_folder_name()
-
-        this_trace_folder = os.path.join(self.trace_folder, trace_name)
+        trace_id = self.folder_index.get_or_create_int(trace_name)
+        this_trace_folder = os.path.join(self.trace_folder, str(trace_id))
         os.makedirs(this_trace_folder, exist_ok=True)
-        file_name = str(file_under_trace) + "." + self.trace_file_ext
+        file_name = str(file_under_trace) + os.path.extsep + self.trace_file_ext
         return os.path.join(this_trace_folder, file_name)
 
     def _scope_file_path(self, trace_name, file_under_trace):
-        if isinstance(trace_name, TestCase):
-            trace_name = trace_name.to_folder_name()
-        this_trace_folder = os.path.join(self.trace_folder, trace_name)
+        trace_id = self.folder_index.get_int(trace_name)
+        this_trace_folder = os.path.join(self.trace_folder, str(trace_id))
         os.makedirs(this_trace_folder, exist_ok=True)
-        file_name = str(file_under_trace) + "." + self.scopes_file_ext
+        file_name = str(file_under_trace) + os.path.extsep + self.scopes_file_ext
         return os.path.join(this_trace_folder, file_name)
 
     def _log_scope_closed(self, file, scope):
@@ -127,8 +125,6 @@ class Tracer(object):
         logger.debug("Tracer stopped with trace name {trace_name}", trace_name=self.current_trace_name)
         [f.close() for f in self.current_log_files.values()]
         [f.close() for f in self.current_scope_files.values()]
-        # self.current_log_files = {}
-        # self.current_scope_files = {}
         self.current_trace_name = ""
         sys.settrace(self.prev_trace_func)
         self.prev_trace_func = None
@@ -136,22 +132,18 @@ class Tracer(object):
     def mark_test_case_failed(self, test_case):
         self.failed_test_cases.append(test_case)
 
-    def fullstop(self):
-        json.dump(
-            {v: k for k, v in self.file_index.items()},
-            self.index_file,
-            indent=2
-        )
-        self.index_file.close()
+    def full_stop(self):
+        self.file_index.save(self._trace_index_path())
+        self.folder_index.save(self._folder_index_path())
 
-        json.dump(
-            [case.to_folder_name() for case in self.failed_test_cases],
-            self.failed_test_cases_file,
-            indent=2
-        )
-        self.failed_test_cases_file.close()
+        with open(self._failed_test_cases_file_path(), "w", encoding="utf-8") as f:
+            json.dump(
+                [case for case in self.failed_test_cases],
+                f,
+                indent=2
+            )
 
-        logger.debug("Tracer closed, file index saved to {p}", p=self._index_file_path())
+        logger.debug("Tracer closed, file index saved to {p}", p=self._trace_index_path())
 
     def _tracefunc(self, frame, event, _):
         file_path = frame.f_code.co_filename
@@ -171,7 +163,7 @@ class Tracer(object):
                 self.scope_stack.append(self.scope_counter)
             elif event == "return":
                 is_return = True
-                file_idx = self.file_index[file_path]
+                file_idx = self.file_index.get_or_create_int(file_path)
                 self._log_scope_closed(file=file_idx, scope=self.scope_stack[-1])
                 self.scope_stack.pop()
 
@@ -182,11 +174,12 @@ class Tracer(object):
             if is_comprehension:
                 pass
             elif is_call or event == "line":
-                if file_path in self.file_index:
-                    file_idx = self.file_index[file_path]
-                else:
-                    self.file_index[file_path] = len(self.file_index)
-                    file_idx = len(self.file_index) - 1
+                file_idx = self.file_index.get_or_create_int(file_path)
+                # if file_path in self.file_index:
+                #     file_idx = self.file_index[file_path]
+                # else:
+                #     self.file_index[file_path] = len(self.file_index)
+                #     file_idx = len(self.file_index) - 1
                 self._log_line(file_idx, line, frame_self, scope)
 
         return self._tracefunc

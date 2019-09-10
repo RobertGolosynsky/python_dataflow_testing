@@ -8,9 +8,9 @@ import thorough
 pd.options.display.max_colwidth = 30
 
 
-class TestBranchCoverageClass(unittest.TestCase):
+class TestStatementCoverageClass(unittest.TestCase):
 
-    def test_branch_coverage(self):
+    def test_statement_coverage(self):
         project_root = LINKED_LIST_ROOT
         trace_root = create_new_temp_dir()
         exclude_folders = ["venv", "dataset"]

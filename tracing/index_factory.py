@@ -1,9 +1,7 @@
-from pprint import pprint
 
 from cpp.cpp_import import load_cpp_extension
 from model.cfg.project_cfg import read_du_index
-from tracing.trace_reader import read_files_index
-import numpy as np
+from tracing.trace_reader import TraceReader
 
 cpp_def_use = load_cpp_extension("def_use_pairs_ext")
 CPPVariableIndex = cpp_def_use.VariableIndex
@@ -46,9 +44,10 @@ class VarIndex:
 
     @staticmethod
     def create(project_root, traces_root):
+        trace_reader = TraceReader(traces_root)
         return VarIndex(
             read_du_index(project_root),
-            read_files_index(traces_root)
+            trace_reader.files_mapping.index
         )
 
     def __init__(self, variables_index_json, file_index_json):
@@ -56,6 +55,8 @@ class VarIndex:
         self.index = self.as_int_index(variables_index_json, file_index_json)
         self.defs = self.index["definitions"]
         self.uses = self.index["uses"]
+        print(self.defs)
+        print(self.uses)
 
     def get_object_vars(self, np_array):
         defs = []
@@ -97,7 +98,7 @@ class VarIndex:
         return defs, uses
 
     def as_int_index(self, index, file_index):
-        file_index = {v: k for k, v in file_index.items()}
+        # file_index = {v: k for k, v in file_index.items()}
         int_index = {}
         for vtype in index:
             int_index[vtype] = {}

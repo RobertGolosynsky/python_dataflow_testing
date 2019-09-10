@@ -7,9 +7,8 @@ from pathlib import Path
 import tempfile
 import inspect
 
-from tracing.trace_reader import read_files_index, read_df, get_trace_files
+from tracing.trace_reader import read_df, TraceReader
 from config import PROJECT_NAME
-from util.misc import key_where
 
 THIS_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_ROOT = THIS_DIR.parent.parent
@@ -26,7 +25,11 @@ def create_new_temp_dir():
     return folder_path
 
 
-def trace_this(function, project_root=PROJECT_ROOT, trace_root=TEMP_DIRECTORY, args=[], kwargs={}):
+def trace_this(function, project_root=PROJECT_ROOT, trace_root=TEMP_DIRECTORY, args=None, kwargs=None):
+    if args is None:
+        args = []
+    if kwargs is None:
+        kwargs = {}
     target_source_file = inspect.getsourcefile(function)
 
     keep = [str(project_root)]
@@ -38,17 +41,14 @@ def trace_this(function, project_root=PROJECT_ROOT, trace_root=TEMP_DIRECTORY, a
     tracer.start(trace_name)
     function(*args, **kwargs)
     tracer.stop()
-    tracer.fullstop()
+    tracer.full_stop()
 
-    file_index = read_files_index(trace_folder)
-    target_file_idx = key_where(file_index, target_source_file)
-    trace_file_path = get_trace_files(trace_folder, trace_name=trace_name, file_index=target_file_idx)
+    trace_reader = TraceReader(trace_root)
 
-    return trace_file_path
+    return trace_reader.trace_path(trace_name, target_source_file)
 
 
 def get_trace(function, *args, **kwargs):
     trace_file_path = trace_this(function, *args, **kwargs)
-    print(trace_file_path)
     trace, _ = read_df(trace_file_path)
     return trace

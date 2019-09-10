@@ -1,19 +1,14 @@
-import os
 import unittest
-from time import time
 
-from test.test_tracer import trace_this, PROJECT_ROOT, LINKED_LIST_LL, LINKED_LIST_ROOT, \
-    create_new_temp_dir
-from graphs.draw import source_w_pairs
+from test.test_tracer import LINKED_LIST_LL, LINKED_LIST_ROOT, create_new_temp_dir
 from model.cfg.project_cfg import ProjectCFG
-from tracing.cpp_tracing.analize import analyze_trace, analyze_trace_w_index, get_trace_files
-from tracing.index_factory import VarIndexFactory, read_files_index
-from util.astroid_util import compile_module
-from tracing.trace_reader import read_df
+from tracing.cpp_tracing.analize import analyze_trace_w_index
+from tracing.cpp_tracing.intermethod_interclass_anaize import analyze
+from tracing.index_factory import VarIndexFactory
+from tracing.trace_reader import read_df, TraceReader, read_scopes_for_trace_file
 from cpp.cpp_import import load_cpp_extension
 
 import thorough
-from util.misc import key_where
 
 cpp_def_use = load_cpp_extension("def_use_pairs_ext")
 cpp_find_pairs = cpp_def_use.findPairsIndex
@@ -22,36 +17,67 @@ cpp_find_pairs = cpp_def_use.findPairsIndex
 class TestTraceAnalyzer(unittest.TestCase):
 
     def test_intra_method_pairs(self):
-        test_cases = ["test_append_when_empty",
-                      "test_append_when_not_empty",
-                      "test_len",
-                      "test_get",
-                      "test_get_empty",
-                      "test_get_out_bounds"]
-        len_pairs = [10, 15, 14, 10, 5, 18]
+        len_pairs = [11, 10, 15, 21, 3, 22, 10, 5, 20, 18, 14, 21, 3, 20, 20, 26, 11, 2, 10]
         project_root = LINKED_LIST_ROOT
         trace_root = create_new_temp_dir()
         exclude_folders = ["venv"]
         cfg = ProjectCFG.create_from_path(project_root, exclude_folders=exclude_folders)
 
         thorough.run_tests(LINKED_LIST_ROOT, trace_root, exclude_folders)
+        trace_reader = TraceReader(trace_root)
 
         cppvi = VarIndexFactory.new_cpp_index(project_root, trace_root)
-        file_index = read_files_index(trace_root)
-        ll_py = str(LINKED_LIST_LL)
-        ll_py_idx = key_where(file_index, ll_py)
 
-        def get_pairs(trace_name):
-            trace_file = get_trace_files(trace_root, trace_name=trace_name, file_index=ll_py_idx)
-            print(trace_file)
-            np_array, _ = read_df(trace_file)
-            idx_pairs = analyze_trace_w_index(trace_file, cppvi)
+        ll_py = str(LINKED_LIST_LL)
+
+        def get_pairs(trace_file_path):
+            np_array, _ = read_df(trace_file_path)
+            idx_pairs = analyze_trace_w_index(trace_file_path, cppvi)
 
             def rename_vars(s):
                 return {(el[0], el[1]) for el in s}
 
             idx_pairs = rename_vars(idx_pairs)
             return idx_pairs
-        for test_case, count in zip(test_cases, len_pairs):
-            pairs = get_pairs(test_case)
-            self.assertEqual(count, len(pairs), "Pairs count don't match for test case: {}".format(test_case))
+
+        node_ids, paths = trace_reader.get_traces_for(ll_py)
+        for node_id, path, expected_pairs_count in zip(node_ids, paths, len_pairs):
+            pairs = get_pairs(path)
+            self.assertEqual(expected_pairs_count, len(pairs),
+                             "Pairs count don't match for test case: {}".format(node_id))
+
+    def test_inter_method_pairs_test_interclass_pairs(self):
+        len_im_pairs = [0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]
+        len_ic_pairs = [5, 2, 5, 4, 1, 4, 2, 1, 5, 5, 7, 4, 1, 10, 7, 5, 9, 1, 4]
+
+        project_root = LINKED_LIST_ROOT
+        trace_root = create_new_temp_dir()
+        exclude_folders = ["venv"]
+        cfg = ProjectCFG.create_from_path(project_root, exclude_folders=exclude_folders)
+
+        thorough.run_tests(LINKED_LIST_ROOT, trace_root, exclude_folders)
+        trace_reader = TraceReader(trace_root)
+
+        cppvi = VarIndexFactory.new_py_index(project_root, trace_root)
+
+        ll_py = str(LINKED_LIST_LL)
+
+        def get_pairs(trace_file_path):
+            np_array, _ = read_df(trace_file_path)
+            scopes = read_scopes_for_trace_file(trace_file_path)
+            im_pairs, ic_pairs = analyze(trace_file_path, cppvi, scopes)
+
+            def rename_vars(s):
+                return {(el[0], el[1]) for el in s}
+
+            im_pairs = rename_vars(im_pairs)
+            ic_pairs = rename_vars(ic_pairs)
+            return im_pairs, ic_pairs
+
+        node_ids, paths = trace_reader.get_traces_for(ll_py)
+        for node_id, path, expected_im_len, expected_ic_len in zip(node_ids, paths, len_im_pairs, len_ic_pairs):
+            im_pairs, ic_pairs = get_pairs(path)
+            self.assertEqual(expected_im_len, len(im_pairs),
+                             "Intermethod pairs count don't match for test case: {}".format(node_id))
+            self.assertEqual(expected_ic_len, len(ic_pairs),
+                             "Intermethod pairs count don't match for test case: {}".format(node_id))

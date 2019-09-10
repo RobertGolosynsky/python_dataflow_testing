@@ -7,37 +7,66 @@ from pathlib import Path
 
 from loguru import logger
 
-from model.test_case import TestCase
-from tracing.tracer import Tracer, IDX_INDEX, FILE_INDEX, LINE_INDEX, SELF_INDEX, SCOPE_INDEX
+from tracing.string_to_int_index import StringToIntIndex
+from tracing.tracer import Tracer
 
 
-def get_trace_files(root, suffix=Tracer.trace_file_ext, trace_name=None, file_index=None):
-    trace_files = []
-    for dirpath, dnames, fnames in os.walk(root):
-        if trace_name is None or dirpath.endswith(trace_name):
-            for f in fnames:
-                if f.endswith(suffix):
-                    if file_index is None:
-                        trace_files.append(os.path.join(dirpath, f))
-                    elif f.endswith(str(file_index) + "." + suffix):
-                        return os.path.join(dirpath, f)
-    if file_index:
-        return None
-    else:
-        return trace_files
+def _filename(file_index):
+    return str(file_index) + os.path.extsep + Tracer.trace_file_ext
 
 
-def read_files_index(trace_root):
-    path = os.path.join(trace_root, Tracer.trace_folder, Tracer.files_index_file)
-    with open(path) as f:
-        file_dict = json.load(f)
-        return {int(k): v for k, v in file_dict.items()}
+class TraceReader:
+    def __init__(self, trace_root):
+        if not isinstance(trace_root, Path):
+            trace_root = Path(trace_root)
+        self.trace_root = trace_root
+        self.main_root = self.trace_root / Tracer.trace_folder
 
+        self.files_mapping = self.read_files_mapping()
+        self.folders_mapping = self.read_folders_mapping()
 
-def read_failed_test_cases(trace_root):
-    path = os.path.join(trace_root, Tracer.trace_folder, Tracer.failed_test_cases_file)
-    with open(path) as f:
-        return json.load(f)
+    def read_files_mapping(self) -> StringToIntIndex:
+        return StringToIntIndex.load(self.main_root / Tracer.trace_index_file_name)
+
+    def read_folders_mapping(self) -> StringToIntIndex:
+        return StringToIntIndex.load(self.main_root / Tracer.folder_index_file_name)
+
+    def read_failed_test_cases(self):
+        path = self.main_root / Tracer.failed_test_cases_file
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+
+    def get_node_ids(self):
+        return self.folders_mapping.keys()
+
+    def get_traces_for(self, module_path, selected_node_ids=None):
+        file_index = self.files_mapping.get_int(module_path)
+        file_name = _filename(file_index)
+        paths = []
+        node_ids = []
+        if not selected_node_ids:
+            selected_node_ids = self.get_node_ids()
+
+        for node_id in selected_node_ids:
+            folder_id = self.folders_mapping.get_int(node_id)
+            trace_file_path = self.main_root / str(folder_id) / file_name
+            if trace_file_path.is_file():
+                paths.append(trace_file_path)
+                node_ids.append(node_id)
+
+        return node_ids, paths
+
+    def trace_path_to_tracee_index_and_node_id(self, s):
+        trace_path = Path(s)
+        test_case_folder_name = trace_path.parent.name
+        node_id = self.folders_mapping.get_string(test_case_folder_name)
+        tracee_index = int(trace_path.stem)
+        return tracee_index, node_id
+
+    def trace_path(self, node_id: str, module_under_test_path: str):
+        folder_id = self.folders_mapping.get_int(node_id)
+        file_id = self.files_mapping.get_int(module_under_test_path)
+        return self.main_root/str(folder_id)/(str(file_id)+os.extsep+Tracer.trace_file_ext)
 
 
 def read_df(f, cut=-1, max_size_mb=None):
@@ -85,32 +114,3 @@ def read_scopes_for_trace_file(trace_file_path):
     ).values
 
     return dict(np_array)
-
-
-def get_test_cases(trace_root):
-    path = os.path.join(trace_root, Tracer.trace_folder)
-    return next(os.walk(path))[1]
-
-
-def get_traces_for_tracee(trace_root, file_index, test_cases=None):
-
-    file_name = str(file_index) + os.path.extsep + Tracer.trace_file_ext
-    root = Path(trace_root) / Tracer.trace_folder
-    paths = []
-    for test_case in get_test_cases(trace_root):
-        if test_cases is not None:
-            if test_case not in test_cases:
-                continue
-        trace_file_path = root / test_case / file_name
-        if trace_file_path.is_file():
-            paths.append((test_case, trace_file_path))
-
-    return paths
-
-
-def trace_path_to_tracee_index_and_test_case(s):
-    trace_path = Path(s)
-    test_case_folder_name = trace_path.parent.name
-    test_case = TestCase.from_folder_name(test_case_folder_name)
-    tracee_index = int(trace_path.stem)
-    return tracee_index, test_case

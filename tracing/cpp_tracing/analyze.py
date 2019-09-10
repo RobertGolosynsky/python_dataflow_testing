@@ -1,30 +1,15 @@
-from pathlib import Path
-import sys
-import cppimport
 
 from time import time
 import gc
 
 from cpp.cpp_import import load_cpp_extension
-from model.cfg.project_cfg import read_du_index
 import numpy as np
 
-from tracing.index_factory import VarIndexFactory
-from tracing.trace_reader import read_files_index, get_trace_files, read_df
+from tracing.trace_reader import read_df
 from util.misc import timing
 
 def_use_pairs_ext = load_cpp_extension("def_use_pairs_ext")
 
-
-#
-# def _analyze(project_root, trace_root):
-#     trace_files = get_trace_files(trace_root)
-#     var_index = VarIndexFactory.new_py_index(project_root, trace_root)
-#
-#     for i, f in enumerate(trace_files):
-#         unique = analyze_trace(f, var_index)
-#         print("Progress:", (i + 1) * 100 // len(trace_files))
-#
 
 @timing
 def analyze_trace(trace_file, py_var_index):

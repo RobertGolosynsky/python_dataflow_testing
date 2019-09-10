@@ -1,6 +1,5 @@
-from tracing.cpp_tracing.analize import analyze_trace_w_index
 from tracing.index_factory import VarIndex
-from tracing.trace_reader import read_df, read_scopes_for_trace_file
+from tracing.trace_reader import read_df
 from tracing.tracer import SCOPE_INDEX, IDX_INDEX, LINE_INDEX
 
 

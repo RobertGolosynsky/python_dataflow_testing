@@ -1,18 +1,13 @@
-import os
-from pathlib import Path
 import pandas as pd
 
 from coverage_metrics.coverage_interface import Coverage
 from coverage_metrics.util import percent
 from graphs.keys import LINE_KEY
 from model.cfg.project_cfg import ProjectCFG
-from model.test_case import TestCase
-from tracing.trace_reader import read_files_index, get_traces_for_tracee, read_df
+from tracing.trace_reader import TraceReader, read_df
 from tracing.tracer import LINE_INDEX
 
 from loguru import logger
-
-from util.misc import key_where
 
 
 class StatementCoverage(Coverage):
@@ -25,63 +20,45 @@ class StatementCoverage(Coverage):
         self.project_cfg = ProjectCFG.create_from_path(project_root, exclude_folders=exclude_folders,
                                                        use_cached_if_possible=True)
         self.trace_root = trace_root
-        self.files_index = read_files_index(trace_root)
+        self.trace_reader = TraceReader(self.trace_root)
 
     def report(self):
         logger.info("Generating statement coverage report")
         statements_per_module = self._lines_per_module()
-        coverage_per_tracee = self.covered_statements_per_tracee()
+        coverage_per_module = self.covered_statements_per_module()
         report = {}
 
-        for tracee in coverage_per_tracee:
-            module_path = self.files_index[tracee]
+        for module_path in coverage_per_module:
             if module_path in statements_per_module:
-                only_statements_in_cfgs = coverage_per_tracee[tracee].intersection(statements_per_module[module_path])
-                report[tracee] = percent(only_statements_in_cfgs,
-                                         statements_per_module[module_path])
+                covered_statements = coverage_per_module[module_path]
+                cfg_statements = statements_per_module[module_path]
+                covered_cfg_statements = covered_statements.intersection(cfg_statements)
+                report[module_path] = percent(covered_cfg_statements,
+                                              cfg_statements)
 
-        df = pd.DataFrame.from_dict({self.coverage_col: report}, orient="columns")
-
-        files = pd.DataFrame.from_dict({self.file_path_col: self.files_index})
-        report = pd.merge(files, df, left_index=True, right_index=True)
-        # TODO: just create in a way that we don't need to rearrange
-        report[self.file_name_col] = [os.path.basename(f) for f in report[self.file_path_col]]
-        report = report[[self.file_name_col, self.coverage_col, self.file_path_col]]
+        report = pd.DataFrame.from_dict({self.coverage_col: report}, orient="columns")
         return report
 
-    def covered_statements_per_tracee(self):
+    def covered_statements_per_module(self):
         logger.info("Counting covered statements per module")
         covered = self.covered_statements()
         data = {}
-        for tracee_index in covered:
-            statements_per_tracee = set()
-            for test_case in covered[tracee_index]:
-                statements_per_tracee |= covered[tracee_index][test_case]
-            data[tracee_index] = statements_per_tracee
+        for module_path in covered:
+            all_covered_statements = set()
+            for node_id in covered[module_path]:
+                all_covered_statements |= covered[module_path][node_id]
+            data[module_path] = all_covered_statements
 
         return data
 
     def covered_statements(self):
         logger.info("Counting covered statements per module and test case")
         data = {}
-
-        for tracee_index in self.files_index:
-            data[tracee_index] = self.covered_statements_of(tracee_index)
+        modules_paths = self.trace_reader.files_mapping.keys()
+        for module_path in modules_paths:
+            data[module_path] = self.covered_items_of(module_path)
 
         return data
-
-    def covered_statements_of(self, tracee_index, test_cases=None):
-        trace_root = Path(self.trace_root)
-        covered_lines = {}
-        for test_case, trace_file_path in get_traces_for_tracee(trace_root, tracee_index, test_cases=test_cases):
-            test_case = TestCase.from_folder_name(test_case)
-            df, size = read_df(trace_file_path, max_size_mb=self.max_trace_size)
-            if df is not None:
-                lines = df.T[LINE_INDEX]  # TODO: mb move line index to trace reader?
-                covered_lines[test_case] = set(lines)
-            else:
-                covered_lines[test_case] = set()
-        return covered_lines
 
     def _lines_per_module(self):
         logger.info("Counting lines per module")
@@ -107,5 +84,14 @@ class StatementCoverage(Coverage):
         return self.lines_in_module(module_cfg)
 
     def covered_items_of(self, module_path, of_type=None, test_cases=None) -> dict:
-        tracee_index = key_where(self.files_index, value=module_path)
-        return self.covered_statements_of(tracee_index, test_cases=test_cases)
+        covered_lines = {}
+        node_ids, paths = self.trace_reader.get_traces_for(module_path=module_path,
+                                                           selected_node_ids=test_cases)
+        for node_id, trace_file_path in zip(node_ids, paths):
+            df, size = read_df(trace_file_path, max_size_mb=self.max_trace_size)
+            if df is not None:
+                lines = df.T[LINE_INDEX]
+                covered_lines[node_id] = set(lines)
+            else:
+                covered_lines[node_id] = set()
+        return covered_lines
