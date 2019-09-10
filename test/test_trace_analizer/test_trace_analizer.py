@@ -2,8 +2,8 @@ import unittest
 
 from test.test_tracer import LINKED_LIST_LL, LINKED_LIST_ROOT, create_new_temp_dir
 from model.cfg.project_cfg import ProjectCFG
-from tracing.cpp_tracing.analize import analyze_trace_w_index
-from tracing.cpp_tracing.intermethod_interclass_anaize import analyze
+from tracing.cpp_tracing.analyze import analyze_trace_w_index
+from tracing.cpp_tracing.intermethod_interclass_analyze import analyze
 from tracing.index_factory import VarIndexFactory
 from tracing.trace_reader import read_df, TraceReader, read_scopes_for_trace_file
 from cpp.cpp_import import load_cpp_extension

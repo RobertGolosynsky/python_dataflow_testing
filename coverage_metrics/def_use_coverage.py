@@ -5,8 +5,8 @@ from coverage_metrics.coverage_interface import Coverage
 from coverage_metrics.util import percent
 from coverage_metrics.coverage_metric_enum import CoverageMetric
 from model.cfg.project_cfg import ProjectCFG
-from tracing.cpp_tracing.analize import analyze_trace_w_index
-from tracing.cpp_tracing.intermethod_interclass_anaize import analyze
+from tracing.cpp_tracing.analyze import analyze_trace_w_index
+from tracing.cpp_tracing.intermethod_interclass_analyze import analyze
 from tracing.index_factory import VarIndexFactory
 from tracing.trace_reader import TraceReader, read_df, read_scopes_for_trace_file
 
