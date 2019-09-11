@@ -1,7 +1,7 @@
 import os
 
 
-def find_files(d, ext, excluded_dirs, excluded_files):
+def find_files(d, ext, excluded_dirs, excluded_files, exclude_hidden_directories=False):
     files = []
     filter_fileext = with_extension(ext)
 
@@ -13,7 +13,10 @@ def find_files(d, ext, excluded_dirs, excluded_files):
                 if not excluded_files or full_path not in excluded_files:
                     files.append(full_path)
         elif filter_dir(file_or_folder):
-            files.extend(find_files(full_path, ext, excluded_dirs, excluded_files))
+            if not exclude_hidden_directories or not file_or_folder.startswith("."):
+                recursive = find_files(full_path, ext, excluded_dirs, excluded_files,
+                                   exclude_hidden_directories=exclude_hidden_directories)
+                files.extend(recursive)
     return files
 
 

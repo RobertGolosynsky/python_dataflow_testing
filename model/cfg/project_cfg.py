@@ -27,7 +27,7 @@ class ProjectCFG:
 
     @staticmethod
     def create_from_path(project_path, exclude_folders=None, exclude_files=None, use_cached_if_possible=True):
-        module_paths = find_files(project_path, ".py", exclude_folders, exclude_files)
+        module_paths = find_files(project_path, ".py", exclude_folders, exclude_files, exclude_hidden_directories=True)
         project_changed = ProjectCFG._check_project_changed(project_path, module_paths)
         if project_changed:
             logger.debug("Project changed so we have to recreate the project cfg")
@@ -120,8 +120,8 @@ class ProjectCFG:
     def _calculate_project_hash(module_paths):
         h = hashlib.sha1()
         for f_path in module_paths:
-            last_modified_time = pathlib.Path(f_path).stat().st_mtime
-            h.update(str(last_modified_time).encode())
+            with open(f_path) as f:
+                h.update(f.read().encode())
         return h.hexdigest()
 
     @staticmethod

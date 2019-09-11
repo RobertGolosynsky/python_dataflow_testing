@@ -139,7 +139,7 @@ class Project(object):
 
     def find_test_modules(self):
         modules = []
-        for f in find_files(self.project_path, ".py", self.exclude_folders, []):
+        for f in find_files(self.project_path, ".py", self.exclude_folders, [], exclude_hidden_directories=True):
             if os.path.basename(f)[:4].lower() == "test":
                 modules.append(f)
         return modules
@@ -148,7 +148,8 @@ class Project(object):
         test_modules = self.find_test_modules()
         modules = []
 
-        for f in find_files(self.project_path, ".py", self.exclude_folders, test_modules):
+        for f in find_files(self.project_path, ".py", self.exclude_folders, test_modules,
+                            exclude_hidden_directories=True):
             modules.append(f)
 
         return modules
