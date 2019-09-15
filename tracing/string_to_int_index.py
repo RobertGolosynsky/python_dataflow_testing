@@ -33,7 +33,6 @@ class StringToIntIndex:
 
     def save(self, path):
         with open(path, "w", encoding="utf-8") as f:
-            print(self.index)
             json.dump(
                 {k: v for k, v in self.index.items()},
                 f,

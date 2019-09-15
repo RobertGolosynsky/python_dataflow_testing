@@ -55,8 +55,6 @@ class VarIndex:
         self.index = self.as_int_index(variables_index_json, file_index_json)
         self.defs = self.index["definitions"]
         self.uses = self.index["uses"]
-        print(self.defs)
-        print(self.uses)
 
     def get_object_vars(self, np_array):
         defs = []

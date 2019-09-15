@@ -95,10 +95,7 @@ class CFG:
                 self.g.add_edge(sub_graph_exit, child, **{RETURN_KEY: caller_name})
 
     def insert_graph_at_node(self, node, sub_graph):
-        # print("graph", self.g.nodes())
-        # print("sub_graph", sub_graph.g.nodes())
         self.g = nx.compose(self.g, sub_graph.g)
-        # self.g.remove_node(node)
         self.hook_up_call_site(node, sub_graph.entry_label, sub_graph.exit_label)
 
     def collect_definitions_and_uses(self, filter_self=True):
@@ -232,13 +229,6 @@ def try_create_cfg(func, definition_line=None, args=None) -> Optional[CFG]:
         dest = edge.dest
         source_offset = source.bb.index[1]
         dest_offset = dest.bb.index[0]
-        # print("%i -> %i" % (source_offset, dest_offset),
-        #       "| kind: " + edge.kind +
-        #       " | source flags: " +
-        #       str(fl2name(edge.source.flags)) +
-        #       " | dest flags: " +
-        #       str(fl2name(edge.dest.flags))
-        #       )
         if not dest_offset % 2 == 0:  # maybe don't add an extra node for exit?
             g.add_edge(source_offset, exit_node_offset,
                        label=edge.kind + " / " + str(fl2name(edge.source.flags)) + " / " + str(
@@ -287,7 +277,6 @@ def try_create_cfg(func, definition_line=None, args=None) -> Optional[CFG]:
 
 
 def _try_fake_instructions_function_arguments(func, definition_line=None, args=None):
-    # print(func, definition_line, args)
     if not definition_line:
         try:
             _, definition_line = inspect.getsourcelines(func)

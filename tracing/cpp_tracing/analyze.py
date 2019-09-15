@@ -18,8 +18,6 @@ def analyze_trace(trace_file, py_var_index):
 
     st = time()
     defs, uses = py_var_index.get_vars(np_array)
-    print(defs)
-    print(uses)
     # pairs_cpp_new = cpp_pairs_new(*_drop_where_no_def_no_use(np_array, defs, uses))
     pairs_cpp_new = cpp_pairs_new(np_array, defs, uses)
     total_new = time() - st

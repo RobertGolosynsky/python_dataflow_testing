@@ -6,6 +6,7 @@ import numpy as np
 from pathlib import Path
 
 from loguru import logger
+from pandas.errors import EmptyDataError
 
 from tracing.string_to_int_index import StringToIntIndex
 from tracing.tracer import Tracer
@@ -106,11 +107,14 @@ def read_scopes_for_trace_file(trace_file_path):
     scopes_file_path = parent / (file_name_w_o_suffix + "." + Tracer.scopes_file_ext)
     if not scopes_file_path.is_file():
         return None
-    np_array = pd.read_csv(
-        scopes_file_path,
-        header=None,
-        delimiter=",",
-        dtype=int  # TODO: optimize
-    ).values
-
+    try:
+        np_array = pd.read_csv(
+            scopes_file_path,
+            header=None,
+            delimiter=",",
+            dtype=int  # TODO: optimize
+        ).values
+    except EmptyDataError as e:
+        logger.warning("Scopes file appears to be empty")
+        return dict()
     return dict(np_array)

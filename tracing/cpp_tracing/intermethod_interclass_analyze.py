@@ -7,7 +7,6 @@ from tracing.tracer import SCOPE_INDEX, IDX_INDEX, LINE_INDEX
 def analyze(trace_path, index: VarIndex, scopes_ends):
     df, size_mb = read_df(trace_path)
     defs, uses = index.get_object_vars(df)
-    # print(defs, uses)
     reach_in = []
     intermethod_pairs = []
     intraclass_pairs = []
