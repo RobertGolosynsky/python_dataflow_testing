@@ -33,10 +33,12 @@ class DefUsePairsCoverage(Coverage):
         report = {}
 
         for module_path in self.trace_reader.files_mapping.keys():
-            covered_pairs = self.covered_items_of(module_path, of_type=of_type)
+            covered_pairs_per_test_case = self.covered_items_of(module_path, of_type=of_type)
+            covered_items_of_module = set()
+            for s in covered_pairs_per_test_case.values():
+                covered_items_of_module.update(s)
             total_pairs = self.total_items_of(module_path, of_type=of_type)
-            report[module_path] = percent(covered_pairs,
-                                          total_pairs)
+            report[module_path] = percent(covered_items_of_module, total_pairs)
 
         report = pd.DataFrame.from_dict({self.coverage_col: report}, orient="columns")
         return report
