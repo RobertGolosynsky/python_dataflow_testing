@@ -109,15 +109,13 @@ def function_name(function_node):
 
 
 def _clean_function_node(func: ast.FunctionDef):
-    # print(ast.dump(func))
     func.decorator_list = []
     func.returns = None
     func.args.defaults = []
-    # if func.returns:
-    #     func.returns.elts = []
     for arg in func.args.args:
         arg.annotation = None
-    # print(ast.dump(func))
+    if func.args.vararg:
+        func.args.vararg.annotation = None
     return func
 
 
