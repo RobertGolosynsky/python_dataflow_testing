@@ -14,8 +14,10 @@ THIS_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_ROOT = THIS_DIR.parent.parent
 TEMP_DIRECTORY = Path(tempfile.gettempdir())
 
-LINKED_LIST_ROOT = PROJECT_ROOT / "dataset" / "linked_list"
-LINKED_LIST_LL = LINKED_LIST_ROOT / "core" / "ll.py"
+CLEAN_LINKED_LIST_ROOT = PROJECT_ROOT / "dataset" / "linked_list_clean"
+CLEAN_LINKED_LIST_LL = CLEAN_LINKED_LIST_ROOT / "core" / "ll.py"
+BUGGY_LINKED_LIST_ROOT = PROJECT_ROOT / "dataset" / "linked_list_bug"
+BUGGY_LINKED_LIST_LL = BUGGY_LINKED_LIST_ROOT / "core" / "ll.py"
 
 
 def create_new_temp_dir():

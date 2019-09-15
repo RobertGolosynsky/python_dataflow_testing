@@ -1,6 +1,6 @@
 import unittest
 
-from test.test_tracer import LINKED_LIST_LL, LINKED_LIST_ROOT, create_new_temp_dir
+from test.test_tracer import CLEAN_LINKED_LIST_LL, CLEAN_LINKED_LIST_ROOT, create_new_temp_dir
 from model.cfg.project_cfg import ProjectCFG
 from tracing.cpp_tracing.analyze import analyze_trace_w_index
 from tracing.cpp_tracing.intermethod_interclass_analyze import analyze
@@ -17,18 +17,19 @@ cpp_find_pairs = cpp_def_use.findPairsIndex
 class TestTraceAnalyzer(unittest.TestCase):
 
     def test_intra_method_pairs(self):
-        len_pairs = [11, 10, 15, 21, 3, 22, 10, 5, 20, 18, 14, 21, 3, 20, 20, 26, 11, 2, 10]
-        project_root = LINKED_LIST_ROOT
+        len_pairs = [9, 8, 13, 19, 3, 20, 8, 5, 18, 16, 12, 19, 3, 18, 18, 24, 9, 2, 8]
+
+        project_root = CLEAN_LINKED_LIST_ROOT
         trace_root = create_new_temp_dir()
         exclude_folders = ["venv"]
         cfg = ProjectCFG.create_from_path(project_root, exclude_folders=exclude_folders)
 
-        thorough.run_tests(LINKED_LIST_ROOT, trace_root, exclude_folders)
+        thorough.run_tests(CLEAN_LINKED_LIST_ROOT, trace_root, exclude_folders)
         trace_reader = TraceReader(trace_root)
 
         cppvi = VarIndexFactory.new_cpp_index(project_root, trace_root)
 
-        ll_py = str(LINKED_LIST_LL)
+        ll_py = str(CLEAN_LINKED_LIST_LL)
 
         def get_pairs(trace_file_path):
             np_array, _ = read_df(trace_file_path)
@@ -50,17 +51,17 @@ class TestTraceAnalyzer(unittest.TestCase):
         len_im_pairs = [0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]
         len_ic_pairs = [5, 2, 5, 4, 1, 4, 2, 1, 5, 5, 7, 4, 1, 10, 7, 5, 9, 1, 4]
 
-        project_root = LINKED_LIST_ROOT
+        project_root = CLEAN_LINKED_LIST_ROOT
         trace_root = create_new_temp_dir()
         exclude_folders = ["venv"]
         cfg = ProjectCFG.create_from_path(project_root, exclude_folders=exclude_folders)
 
-        thorough.run_tests(LINKED_LIST_ROOT, trace_root, exclude_folders)
+        thorough.run_tests(CLEAN_LINKED_LIST_ROOT, trace_root, exclude_folders)
         trace_reader = TraceReader(trace_root)
 
         cppvi = VarIndexFactory.new_py_index(project_root, trace_root)
 
-        ll_py = str(LINKED_LIST_LL)
+        ll_py = str(CLEAN_LINKED_LIST_LL)
 
         def get_pairs(trace_file_path):
             np_array, _ = read_df(trace_file_path)

@@ -10,7 +10,7 @@ import util.astroid_util as au
 here = Path(os.path.realpath(__file__)).parent
 this_project_root = here.parent.parent
 
-linked_list_root = this_project_root / "dataset/linked_list"
+linked_list_root = this_project_root / "dataset/linked_list_clean"
 linked_list = linked_list_root / "core/ll.py"
 
 dictionary_root = this_project_root / "dataset/dictionary"

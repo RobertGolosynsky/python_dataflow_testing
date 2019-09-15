@@ -1,5 +1,6 @@
 from core.node import Node
 
+
 class LinkedList(object):
 
     def __init__(self, seq=None):

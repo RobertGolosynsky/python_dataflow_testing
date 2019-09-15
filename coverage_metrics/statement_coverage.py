@@ -83,10 +83,10 @@ class StatementCoverage(Coverage):
         module_cfg = self.project_cfg.module_cfgs[module_path]
         return self.lines_in_module(module_cfg)
 
-    def covered_items_of(self, module_path, of_type=None, test_cases=None) -> dict:
+    def covered_items_of(self, module_path, of_type=None, selected_node_ids=None) -> dict:
         covered_lines = {}
         node_ids, paths = self.trace_reader.get_traces_for(module_path=module_path,
-                                                           selected_node_ids=test_cases)
+                                                           selected_node_ids=selected_node_ids)
         for node_id, trace_file_path in zip(node_ids, paths):
             df, size = read_df(trace_file_path, max_size_mb=self.max_trace_size)
             if df is not None:

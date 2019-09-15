@@ -55,10 +55,10 @@ class BranchCoverage(StatementCoverage):
 
         return branches
 
-    def covered_items_of(self, module_path, of_type=None, test_cases=None) -> dict:
+    def covered_items_of(self, module_path, of_type=None, selected_node_ids=None) -> dict:
         branches = self.total_items_of(module_path)
 
-        covered_statements = super().covered_items_of(module_path, of_type=None, test_cases=test_cases)
+        covered_statements = super().covered_items_of(module_path, of_type=None, selected_node_ids=selected_node_ids)
         covered_branches_of_node_id = {}
 
         for node_id, lines in covered_statements.items():

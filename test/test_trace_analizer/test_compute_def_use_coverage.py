@@ -1,11 +1,11 @@
 import unittest
 
-from test.test_tracer import LINKED_LIST_LL, LINKED_LIST_ROOT, create_new_temp_dir
+from test.test_tracer import CLEAN_LINKED_LIST_LL, CLEAN_LINKED_LIST_ROOT, create_new_temp_dir
 from model.cfg.project_cfg import ProjectCFG
-from tracing.cpp_tracing.analize import analyze_trace_w_index
+from tracing.cpp_tracing.analyze import analyze_trace_w_index
 from tracing.index_factory import VarIndexFactory
 from tracing.trace_reader import read_df, read_scopes_for_trace_file, TraceReader
-from tracing.cpp_tracing.intermethod_interclass_anaize import analyze
+from tracing.cpp_tracing.intermethod_interclass_analyze import analyze
 
 import thorough
 
@@ -13,20 +13,19 @@ import thorough
 class TestComputeCoverage(unittest.TestCase):
 
     def test_inter_method_pairs(self):
-        project_root = LINKED_LIST_ROOT
+        project_root = CLEAN_LINKED_LIST_ROOT
         trace_root = create_new_temp_dir()
-        print(trace_root)
         exclude_folders = ["venv"]
         cfg = ProjectCFG.create_from_path(project_root,
                                           exclude_folders=exclude_folders,
                                           use_cached_if_possible=False)
 
-        thorough.run_tests(LINKED_LIST_ROOT, trace_root, exclude_folders)
+        thorough.run_tests(CLEAN_LINKED_LIST_ROOT, trace_root, exclude_folders)
         trace_reader = TraceReader(trace_root)
 
         vi = VarIndexFactory.new_py_index(project_root, trace_root)
         cppvi = VarIndexFactory.new_cpp_index(project_root, trace_root)
-        ll_py = str(LINKED_LIST_LL)
+        ll_py = str(CLEAN_LINKED_LIST_LL)
 
         def get_pairs(trace_file_path):
             np_array, _ = read_df(trace_file_path)

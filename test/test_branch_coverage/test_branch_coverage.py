@@ -1,6 +1,6 @@
 import unittest
 
-from test.test_tracer import LINKED_LIST_LL, LINKED_LIST_ROOT, create_new_temp_dir
+from test.test_tracer import CLEAN_LINKED_LIST_LL, CLEAN_LINKED_LIST_ROOT, create_new_temp_dir
 from model.cfg.project_cfg import ProjectCFG
 
 from tracing.trace_reader import read_df, TraceReader
@@ -12,19 +12,19 @@ from tracing.tracer import LINE_INDEX
 class TestBranchCoverage(unittest.TestCase):
 
     def test_branch_coverage(self):
-        project_root = LINKED_LIST_ROOT
+        project_root = CLEAN_LINKED_LIST_ROOT
         trace_root = create_new_temp_dir()
-        print(trace_root)
-        exclude_folders = ["venv"]
+
+        exclude_folders = ["venv", "dataset"]
         cfg = ProjectCFG.create_from_path(project_root,
                                           exclude_folders=exclude_folders,
                                           use_cached_if_possible=False)
 
-        thorough.run_tests(LINKED_LIST_ROOT, trace_root, exclude_folders)
+        thorough.run_tests(CLEAN_LINKED_LIST_ROOT, trace_root, exclude_folders)
 
         trace_reader = TraceReader(trace_root)
 
-        ll_py = str(LINKED_LIST_LL)
+        ll_py = str(CLEAN_LINKED_LIST_LL)
         ll_py_cfg = cfg.module_cfgs[ll_py]
 
         total_exercised = []
@@ -43,10 +43,12 @@ class TestBranchCoverage(unittest.TestCase):
 
 def get_covered_lines(trace_reader, node_id, module_path):
     _, trace_file_paths = trace_reader.get_traces_for(module_path, selected_node_ids=[node_id])
-    trace_file_path = trace_file_paths[0]
-    np_array, _ = read_df(trace_file_path)
-    return np_array.T[LINE_INDEX]
-
+    if trace_file_paths:
+        trace_file_path = trace_file_paths[0]
+        np_array, _ = read_df(trace_file_path)
+        return np_array.T[LINE_INDEX]
+    else:
+        return []
 
 def print_percent(text, given, total):
     a = len(set(given))

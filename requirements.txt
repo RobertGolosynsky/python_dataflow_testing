@@ -1,4 +1,8 @@
+pipfile
+peewee
+virtualenv
 pytest
+pytest-cov
 loguru
 cppimport
 pandas
@@ -7,4 +11,7 @@ matplotlib==2.2.2
 networkx==2.1
 xdis==4.0.1
 -e git+git://github.com/RobertGolosynsky/mutmut.git#egg=mutmut
+-e git+git://github.com/rocky/python-control-flow#egg=control-flow
 pygraphviz
+joblib
+tqdm

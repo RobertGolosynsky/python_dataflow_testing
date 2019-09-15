@@ -2,7 +2,6 @@ import os
 from collections import defaultdict
 from loguru import logger
 from model.cfg.module_cfg import ModuleCFG
-from model.project import Project
 from util.find import find_files
 import pathlib
 import hashlib
@@ -15,15 +14,6 @@ class ProjectCFG:
     tag_file = "version.hash"
     cfg_file = "project.flow"
     du_file = "du.json"
-
-    @staticmethod
-    def create_with_project(project: Project, use_cached_if_possible=True):
-        return ProjectCFG.create_from_path(
-            project.project_path,
-            exclude_folders=project.exclude_folders,
-            exclude_files=project.find_test_modules(),
-            use_cached_if_possible=use_cached_if_possible
-        )
 
     @staticmethod
     def create_from_path(project_path, exclude_folders=None, exclude_files=None, use_cached_if_possible=True):
@@ -121,7 +111,7 @@ class ProjectCFG:
         h = hashlib.sha1()
         for f_path in module_paths:
             with open(f_path) as f:
-                h.update(f.read().encode())
+                h.update(f.read().encode("utf-8"))
         return h.hexdigest()
 
     @staticmethod

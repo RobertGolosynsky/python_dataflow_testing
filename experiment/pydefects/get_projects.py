@@ -1,0 +1,131 @@
+import os
+from pathlib import Path
+from typing import List
+
+from git import Repo
+from playhouse.sqlite_ext import SqliteExtDatabase
+
+from experiment.pydefects.database.models import DATABASE_PROXY, Repository, TestResults, Commit, \
+    CommitTag, CommitCommitTag
+
+
+class RepositoryManager:
+    def __init__(self, repo: Repository, commit: Commit):
+        self.repo = repo
+        self.commit = commit
+        self.name = Path(self.url()).name
+
+    def url(self):
+        return self.repo.homepage
+
+    def path_to_repo(self, folder_path):
+        return os.path.join(folder_path, f"{self.repo.name}_{self.commit.hash}")
+
+    def clone_to(self, path):
+        checkout_path = self.path_to_repo(path)
+        git_repo = Repo.clone_from(self.repo.homepage, checkout_path)
+        git_repo.git.checkout(self.commit.hash)
+        return checkout_path
+
+    def clone_parent_to(self, path):
+        parent_path = os.path.join(
+            path,
+            f"{self.repo.name}_{self.commit.hash}_parent"
+        )
+        git_repo = Repo.clone_from(self.repo.homepage, parent_path)
+        parent = git_repo.commit(self.commit.hash)
+        git_repo.git.checkout(parent.parents[0])
+
+    def __repr__(self):
+        return f"""
+        Repo:       {self.name} @ {self.commit.hash}
+        Failed:     {self.repo.testresults.failed}
+        Passed:     {self.repo.testresults.passed}
+        Skipped:    {self.repo.testresults.skipped}
+        Warnings:   {self.repo.testresults.warnings}
+        Errors:     {self.repo.testresults.error}
+        Time:       {self.repo.testresults.time}s
+        Statements: {self.repo.testresults.statements}
+        Missing:    {self.repo.testresults.missing}
+        Coverage:   {self.repo.testresults.coverage}%
+"""
+
+
+def get_projects(
+        db_path,
+        limit=None,
+        time_less_then=None,
+        passed_greater_than=None,
+        no_errors=True,
+        coverage_greater_then=None,
+        unique_repos=False
+) -> List[RepositoryManager]:
+    db = SqliteExtDatabase(
+        db_path,
+        pragmas={
+            "journal_mode": "wal",
+            "cache_size": -64 * 1000,
+            "foreign_key": 1,
+            "ignore_check_constraints": 9,
+            "synchronous": 0,
+        },
+    )
+    DATABASE_PROXY.initialize(db)
+
+    commits = \
+        Commit.select(
+            Commit.hash,
+            Commit.repository,
+            CommitTag.tag,
+        ).join(
+            CommitCommitTag
+        ).join(
+            CommitTag
+        ).where(
+            CommitTag.tag.startswith("regression")
+        )
+    if limit:
+        commits = commits.limit(limit)
+
+    repos = []
+    for commit in commits:
+        repo = (
+            Repository.select(
+                Repository.id,
+                Repository.name,
+                Repository.homepage,
+                TestResults.failed,
+                TestResults.passed,
+                TestResults.skipped,
+                TestResults.warnings,
+                TestResults.error,
+                TestResults.time,
+                TestResults.statements,
+                TestResults.missing,
+                TestResults.coverage,
+            ).join(
+                TestResults
+            ).where(
+                Repository.id == commit.repository
+            ).get()
+        )
+        # print(repo, dir(commit))
+        repos.append(RepositoryManager(repo, commit))
+    filtered = []
+    used_repos = set()
+    for repo_version in repos:
+        tr: TestResults = repo_version.repo.testresults
+        if time_less_then and tr.time > time_less_then:
+            continue
+        if no_errors and tr.error > 0:
+            continue
+        if coverage_greater_then and tr.coverage < coverage_greater_then:
+            continue
+        if passed_greater_than and tr.passed < passed_greater_than:
+            continue
+        if unique_repos and repo_version.repo.id in used_repos:
+            continue
+        used_repos.add(repo_version.repo.id)
+        filtered.append(repo_version)
+
+    return filtered

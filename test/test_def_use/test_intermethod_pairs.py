@@ -11,7 +11,7 @@ this_project_root = here.parent.parent
 inter_method_root = this_project_root / "dataset/inter_method"
 inter_method = inter_method_root / "module.py"
 
-linked_list_root = this_project_root / "dataset/linked_list"
+linked_list_root = this_project_root / "dataset/linked_list_clean"
 linked_list = linked_list_root / "core/ll.py"
 
 

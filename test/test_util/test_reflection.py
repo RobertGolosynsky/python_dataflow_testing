@@ -15,7 +15,6 @@ class TestReflection(unittest.TestCase):
         module_paths = project.find_modules()
         m_file = "multi.py"
         cls_name = "MultiDict"
-        project.add_to_path()
         multidict_path = [p for p in module_paths if m_file in p][0]
 
         fns, clss, _ = au.compile_module(multidict_path)

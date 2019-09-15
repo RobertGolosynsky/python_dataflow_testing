@@ -1,0 +1,53 @@
+import sys
+import unittest
+from pprint import pprint
+from time import time
+
+import numpy
+import pandas as pd
+
+import thorough
+from coverage_metrics.coverage_metric_enum import CoverageMetric
+from coverage_metrics.def_use_coverage import DefUsePairsCoverage
+from experiment.suite_generator import SuiteGenerator
+
+from test.test_tracer import CLEAN_LINKED_LIST_ROOT, PROJECT_ROOT, create_new_temp_dir
+
+
+class TestCreateTestSuites(unittest.TestCase):
+
+    def test_generate_fixed_size(self):
+        pd.options.display.float_format = '{:,.2f}'.format
+        pd.options.display.width = 0
+
+        project_root = PROJECT_ROOT / "dataset" / "linked_list_clean"
+
+        trace_root = create_new_temp_dir()
+        exclude_folders = ["venv", "dataset"]
+
+        thorough.run_tests(project_root, trace_root, exclude_folders)
+
+        module_under_test_path = str(project_root / "core" / "ll.py")
+        sg = SuiteGenerator(trace_root, project_root, exclude_folders=exclude_folders)
+        suites = sg.fix_sized_suites(
+            module_under_test_path=module_under_test_path,
+            coverage_metric=CoverageMetric.BRANCH,
+            exact_size=3,
+            check_unique_items_covered=True,
+            n=10
+        )
+        self.assertTrue(len(suites) > 0)
+
+        # mutation_testing_results = []
+        #
+        #
+        # for suite in suites:
+        #     st = time()
+        #     res = run_mutation(project_root=project_root,
+        #                        module_under_test=module_under_test_path,
+        #                        test_cases=[tc.to_node_id() for tc in suite.test_cases],
+        #                        tests_root="tests",
+        #                        no_cache=True
+        #                        )
+        #     print("One test suite takes {} seconds to be tested ".format(int(time()-st)))
+        #     mutation_testing_results.append(res)

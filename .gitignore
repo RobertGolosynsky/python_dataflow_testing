@@ -144,10 +144,18 @@ cpp/du_pairs/\.rendered\.def_use_pairs_ext\.cpp
 
 *.mutmut-cache
 
-dataset/
-!dataset/linked_list/
-!dataset/linked_list_mutmut/
+
+dataset/*
+!/dataset/linked_list_clean
+!/dataset/linked_list_clean/*
+!/dataset/linked_list_bug
+!/dataset/linked_list_bug/*
+
 coverage_metrics/cached/
 experiment/cached/
 tracing/cpp_tracing/cached_im_ic/
 tracing/cpp_tracing/cached_m/
+**/.traces
+**/.coverage_cache
+**/.flow_graph
+**/.mutmut_cache

@@ -1,7 +1,7 @@
 import unittest
 import pandas as pd
 from coverage_metrics.def_use_coverage import DefUsePairsCoverage
-from test.test_tracer import LINKED_LIST_ROOT, create_new_temp_dir
+from test.test_tracer import CLEAN_LINKED_LIST_ROOT, create_new_temp_dir
 
 import thorough
 
@@ -11,7 +11,7 @@ pd.options.display.max_colwidth = 30
 class TestDefUseCoverageClass(unittest.TestCase):
 
     def test_branch_coverage(self):
-        project_root = LINKED_LIST_ROOT
+        project_root = CLEAN_LINKED_LIST_ROOT
         trace_root = create_new_temp_dir()
         exclude_folders = ["venv", "dataset"]
 

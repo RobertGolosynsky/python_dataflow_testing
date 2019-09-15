@@ -1,9 +1,7 @@
 import os
 import unittest
-import sys
 
 from model.cfg.project_cfg import ProjectCFG
-from model.project import Project
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -13,9 +11,9 @@ class TestClassModel(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         relative_path = "../../dataset/dictionary"
-        cls.project = Project(os.path.join(THIS_DIR, relative_path))
 
-        cls.project_cfg = ProjectCFG.create_with_project(cls.project)
+        cls.project_cfg = ProjectCFG.create_from_path(os.path.join(THIS_DIR, relative_path),
+                                                      exclude_folders=["venv", "dataset"])
 
         multi_dict_class_name = "MultiDict"
         multidict_cfg = None

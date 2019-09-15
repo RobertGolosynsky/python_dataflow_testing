@@ -1,15 +1,14 @@
 import unittest
 from pathlib import Path
 
-from experiment.mutation import run_mutation
+from experiment.mutation import killed_mutants
 
 
 class TestMutation(unittest.TestCase):
 
     def test_mutate_linked_list_module(self):
-        root = Path("/home/robert/Documents/master/code/python_dataflow_testing/dataset/linked_list_mutmut")
-        module_under_test = Path("core") / "ll.py"
-        tests_dir = Path("tests")
+        root = Path(__file__).parent.parent.parent / "dataset/linked_list_clean"
+        module_under_test = root / "core" / "ll.py"
 
         cases = """
 tests/test_list.py::LinkedListTest::test_append_on_removed
@@ -33,15 +32,14 @@ tests/test_list.py::LinkedListTest::test_remove_when_empty
 tests/test_list.py::LinkedListTest::test_remove_when_not_empty
 tests/test_node.py::TestNode::test_create
 """
-        test_result = run_mutation(project_root=root,
-                                   module_under_test=module_under_test,
-                                   tests_root=tests_dir,
-                                   test_cases=cases.split(),
-                                   no_cache=True
-                                   )
 
-        self.assertEqual(45, test_result.total)
-        self.assertEqual(33, test_result.killed_mutants)
-        self.assertEqual(11, test_result.surviving_mutants)
-        self.assertEqual(1, test_result.surviving_mutants_timeout)
-        self.assertEqual(0, test_result.suspicious_mutants)
+        killed, total = killed_mutants(
+            project_root=str(root),
+            path_to_module_under_test=str(module_under_test),
+            test_cases_ids=cases.split()
+        )
+        s = set()
+        for m in killed.values():
+            s.update(m)
+        self.assertEqual(46, total)
+        self.assertEqual(30, len(s))

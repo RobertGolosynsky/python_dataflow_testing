@@ -1,17 +1,18 @@
 import os
+import shutil
 import subprocess
 import sys
 import urllib.request
-import venv
 import pathlib
-import astroid
+from typing import List, Union
+import pipfile
+import virtualenv
 from loguru import logger
 
-import util.astroid_util as au
 from util.find import find_files
 
 dataset_folder = "dataset"
-activate_this_py_url = "https://raw.githubusercontent.com/pypa/virtualenv/master/virtualenv_embedded/activate_this.py"
+# activate_this_py_url = "https://raw.githubusercontent.com/pypa/virtualenv/master/virtualenv_embedded/activate_this.py"
 
 
 class Project(object):
@@ -19,127 +20,87 @@ class Project(object):
     activate_this_file_name = "activate_this.py"
     bin_folder_name = "bin"
     exclude_folders = ["venv", "__pycache__"]
+    thorough_requirements = """
+pipfile
+peewee
+virtualenv
+pytest
+pytest-cov
+loguru
+cppimport
+pandas
+numpy
+matplotlib==2.2.2
+networkx==2.1
+xdis==4.0.1
+-e git+git://github.com/RobertGolosynsky/mutmut.git#egg=mutmut
+-e git+git://github.com/rocky/python-control-flow#egg=control-flow
+pygraphviz
+""".split("\n")
 
     def __init__(self, project_path):
         self.venv_activated = False
-        self.project_path = str(pathlib.Path(project_path).resolve())
-        self.project_name = os.path.basename(self.project_path)
+        self._path = str(pathlib.Path(project_path).resolve())
+        self.project_name = os.path.basename(self._path)
         self.tests = []
+        self.requirements = self._extract_necessary_packages()
 
     def __repr__(self):
-        return "<Project, path={}>".format(self.project_path)
+        return "<Project, path={}>".format(self._path)
 
     def has_setup(self):
-        return "setup.py" in os.listdir(self.project_path)
+        return "setup.py" in os.listdir(self._path)
 
     def has_requirements(self):
-        return "requirements.txt" in os.listdir(self.project_path)
+        return "requirements.txt" in os.listdir(self._path)
 
     def has_venv(self):
-        return os.path.isdir(os.path.join(self.project_path, self.venv_folder_name))
+        return os.path.isdir(os.path.join(self._path, self.venv_folder_name))
 
-    def create_venv_path(self):
-        return os.path.join(self.project_path, self.venv_folder_name)
-
-    def create_activator_location(self):
-        return os.path.join(self.create_venv_path(),
-                            self.bin_folder_name,
-                            self.activate_this_file_name
-                            )
-
-    def freeze(self, force=False):
-        if self.has_requirements() and not force:
-            return
-
-        cmd = "pipreqs {}".format(self.project_path)
-        if force:
-            cmd += " --force"
-
-        process = subprocess.Popen(cmd, shell=True,
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE,
-                                   # cwd=self.project_path
-                                   )
-
-        out, err = process.communicate()
-        errcode = process.returncode
-        if not errcode == 0:
-            raise SystemError(err)
-        else:
-            return
-        # subprocess.run(["pipreqs", self.project_path, "--force"])
+    def _create_venv_path(self):
+        return os.path.join(self._path, self.venv_folder_name)
 
     def create_venv(self):
-        if not self.has_venv():
-            env = venv.EnvBuilder(system_site_packages=False,
-                                  clear=False,
-                                  symlinks=False,
-                                  upgrade=False,
-                                  with_pip=True,  # apt-get install python3-venv
-                                  prompt=self.project_name)
-            venv_path = self.create_venv_path()
-            env.create(venv_path)
+        venv_path = self._create_venv_path()
+        virtualenv.create_environment(venv_path)
 
-            # add activate_this.py
-            # https://raw.githubusercontent.com/pypa/virtualenv/master/virtualenv_embedded/activate_this.py
-            activator_path = self.create_activator_location()
-            urllib.request.urlretrieve(activate_this_py_url, activator_path)
+    def run_command(self, cmd, extra_requirements=None):
+        if not extra_requirements:
+            extra_requirements = []
+        kw = {
+            "stdout": sys.stderr,
+            "stderr": subprocess.PIPE,
+            "shell": True,
+            "cwd": self._path
+        }
+        packages = [p for p in self.requirements+extra_requirements if p.strip() != ""]
+        activate_venv = f". {self.venv_folder_name}/bin/activate"
+        cmds = [activate_venv]
+        for package in packages:
+            cmds.append(f"pip3 install {package}")
 
-    def _save_params(self):
-        self.saved_params = (
-            os.environ["PATH"],
-            os.environ["VIRTUAL_ENV"],
-            sys.path,
-            sys.prefix
-        )
+        cmds.append(cmd)
 
-    def _revert_params(self):
-        os_path, venv, path, prefix = self.saved_params
-        os.environ["PATH"] = os_path
-        os.environ["VIRTUAL_ENV"] = venv
-        sys.path[:0] = path
-        sys.prefix = prefix
+        extended_cmd = " && ".join(cmds)
+        print("Running", extended_cmd, "in", self._path)
+        proc = subprocess.run(extended_cmd, **kw)
 
-    def activate_venv(self):
-        if self.has_venv():
-            self.venv_activated = True
-            self._save_params()
-            activator_path = self.create_activator_location()  # Looted from virtualenv; should not require modification, since it's defined relatively
-            with open(activator_path) as f:
-                exec(f.read(), {'__file__': activator_path})
-            # print("Using this python environment:", os.path.dirname(sys.executable))
-            print("Using this python environment:", os.environ["VIRTUAL_ENV"])
+        print("Errors:")
+        print("=" * 100)
+        print(proc.stderr.decode("utf-8"))
+        print("=" * 100)
+        return proc.returncode
 
-    def deactivate_venv(self):
-        if self.has_venv():
-            self.venv_activated = False
-            self._revert_params()
+    # def tests_fail(self):
+    #     return self.run_command("pytest -q", extra_requirements=["pytest"]) != 0
 
-    def install_dependencies(self):
-        cmd = "pip3 install -r requirements.txt"
-        process = subprocess.Popen(cmd, shell=True,
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE,
-                                   cwd=self.project_path
-                                   )
-
-        out, err = process.communicate()
-        errcode = process.returncode
-        logger.info("pip3 output \n {out}", out=out)
-        if not errcode == 0:
-            raise SystemError(err)
-        else:
-            return
-
-    def add_to_path(self):
-        sys.path.insert(0, self.project_path)
-
-    def remove_from_path(self):
-        sys.path.remove(self.project_path)
+    def tests_fail(self):
+        return self.run_command("python3 /home/robert/Documents/master/code/python_dataflow_testing/thorough.py -t",
+                                extra_requirements=self.thorough_requirements) != 0
 
     def find_test_modules(self):
         modules = []
-        for f in find_files(self.project_path, ".py", self.exclude_folders, [], exclude_hidden_directories=True):
+        for f in find_files(self._path, ".py", self.exclude_folders, [], exclude_hidden_directories=True):
             if os.path.basename(f)[:4].lower() == "test":
                 modules.append(f)
         return modules
@@ -148,22 +109,57 @@ class Project(object):
         test_modules = self.find_test_modules()
         modules = []
 
-        for f in find_files(self.project_path, ".py", self.exclude_folders, test_modules,
+        for f in find_files(self._path, ".py", self.exclude_folders, test_modules,
                             exclude_hidden_directories=True):
             modules.append(f)
 
         return modules
 
-    def __enter__(self):
-        self.saved_modules = sys.modules.copy()
-        self.activate_venv()
-        self.add_to_path()
-        return self
+    def _extract_necessary_packages(self) -> List[str]:
+        packages = []
+        file_names = [
+            "requirements.txt",
+            "dev-requirements.txt",
+            "dev_requirements.txt",
+            "test-requirements.txt",
+            "test_requirements.txt",
+            "requirements-dev.txt",
+            "requirements_dev.txt",
+            "requirements-test.txt",
+            "requirements_test.txt",
+        ]
+        for file_name in file_names:
+            packages.extend(self._extract_packages(os.path.join(self._path, file_name)))
+        if os.path.exists(os.path.join(self._path, "Pipfile")) and os.path.isfile(
+                os.path.join(self._path, "Pipfile")
+        ):
+            packages.extend(self._extract_packages_from_pipfile())
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.deactivate_venv()
-        for mod in sys.modules:
-            if mod not in self.saved_modules.keys():
-                del sys.modules[mod]
-        for module_name in self.saved_modules:
-            sys.modules[module_name] = self.saved_modules[module_name]
+        return packages
+
+    @staticmethod
+    def _extract_packages(
+            requirements_file: Union[bytes, str, os.PathLike]
+    ) -> List[str]:
+        packages = []
+        if os.path.exists(requirements_file) and os.path.isfile(requirements_file):
+            with open(requirements_file) as f:
+                packages = [
+                    line.strip() for line in f.readlines() if "requirements" not in line
+                ]
+        return packages
+
+    def _extract_packages_from_pipfile(self) -> List[str]:
+        packages = []
+        p = pipfile.load(os.path.join(self._path, "Pipfile"))
+        data = p.data
+        if len(data["default"]) > 0:
+            for k, _ in data["default"].items():
+                packages.append(k)
+        if len(data["develop"]) > 0:
+            for k, _ in data["develop"].items():
+                packages.append(k)
+        return packages
+
+    def delete_from_disk(self):
+        shutil.rmtree(self._path)

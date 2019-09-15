@@ -46,3 +46,7 @@ def get_timing(f):
         return (end - start), result
 
     return wrapper
+
+
+def scale(number, lower_bound, upper_bound):
+    return lower_bound + (upper_bound - lower_bound) * number

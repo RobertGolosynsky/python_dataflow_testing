@@ -1,11 +1,11 @@
+import subprocess
+from pathlib import Path
+
+from test.test_tracer import get_trace, BUGGY_LINKED_LIST_ROOT, PROJECT_ROOT
+
 import unittest
 
-from test.test_tracer import get_trace
-
-import os
-import unittest
-
-from test.test_tracer import LINKED_LIST_ROOT, create_new_temp_dir
+from test.test_tracer import create_new_temp_dir
 
 import thorough
 from tracing.trace_reader import TraceReader
@@ -24,15 +24,16 @@ class TestTracer(unittest.TestCase):
         self.assertEqual(2, scopes)
 
     def test_failed_tests_recorded(self):
-        project_root = LINKED_LIST_ROOT
-        trace_root = create_new_temp_dir()
-        exclude_folders = ["venv"]
+        project_root = BUGGY_LINKED_LIST_ROOT
 
-        thorough.run_tests(project_root, trace_root, exclude_folders)
+        exclude_folders = ["venv"]
+        thorough_location = str(PROJECT_ROOT / "thorough.py")
+        subprocess.run(f"python3 {thorough_location} -t -trace_dir {str(project_root)}", cwd=project_root, shell=True)
+        trace_root = project_root
         trace_reader = TraceReader(trace_root)
         failed_cases = trace_reader.read_failed_test_cases()
         self.assertEqual(1, len(failed_cases))
-        expected_failed_test_case = "tests/test_list.py::LinkedListTest::test_append_on_removed"
+        expected_failed_test_case = "tests/test_linked_list_module.py::LinkedListTest::test_append_on_removed"
         self.assertEqual(expected_failed_test_case, failed_cases[0])
 
 
