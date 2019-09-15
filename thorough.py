@@ -100,7 +100,7 @@ if __name__ == "__main__":
     if args.trace_dir:
         trace_root = args.trace_dir
     else:
-        trace_root = create_new_temp_dir()
+        trace_root = project_root
 
     exclude_folders = ["dataset", "venv", "tests", "test"]
     exit_code = run_tests(project_root, trace_root,

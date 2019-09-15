@@ -15,3 +15,4 @@ xdis==4.0.1
 pygraphviz
 joblib
 tqdm
+gitpython

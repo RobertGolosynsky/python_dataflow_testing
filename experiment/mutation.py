@@ -21,7 +21,7 @@ import random
 
 from tqdm import tqdm
 
-memory = Memory(location=Path(__file__).parent / ".cached_mutants", verbose=0)
+memory = Memory(location=".cached_mutants", verbose=0)
 
 
 @memory.cache(ignore=["timeout"], verbose=100000)
