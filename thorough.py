@@ -34,12 +34,15 @@ def run_tests(project_root, trace_root,
               exclude_folders_collection=None,
               show_time_per_test=False,
               quiet=True,
-              deselect_tests=None
+              deselect_tests=None,
+              node_ids=None
               ):
     if not exclude_folders_collection:
         exclude_folders_collection = []
     if not exclude_folders_tracing:
         exclude_folders_tracing = []
+    if node_ids is None:
+        node_ids = []
     ignore_dirs_expanded = [str((Path(project_root) / d).resolve()) for d in exclude_folders_tracing]
 
     t = Tracer(
@@ -66,9 +69,8 @@ def run_tests(project_root, trace_root,
     os.chdir(project_root)
     print(pytest_params)
     def run():
-        print(pytest_params)
         return pytest.main(
-            pytest_params,
+            node_ids + pytest_params,
             plugins=[MyPlugin(tracer=t)],
         )
 
@@ -94,6 +96,7 @@ if __name__ == "__main__":
     # parser.add_argument('-silence_all', action="store_true", help="Hard silence pytest")
     # parser.add_argument('-silence_all', action="store_true", help="Hard silence pytest")
     parser.add_argument('-trace_dir', type=str, help='Folder for trace files to saved in')
+    parser.add_argument('--pytest_args', type=str, help='Arguments to pass to pytest')
     args, unknown = parser.parse_known_args()
 
     project_root = str(Path("").resolve())
@@ -106,7 +109,8 @@ if __name__ == "__main__":
     exit_code = run_tests(project_root, trace_root,
                           exclude_folders_collection=[],
                           exclude_folders_tracing=exclude_folders,
-                          quiet=args.silence_all
+                          quiet=args.silence_all,
+                          node_ids=args.pytest_args
                           )
     coverage_exclude = exclude_folders
     if not args.t:
