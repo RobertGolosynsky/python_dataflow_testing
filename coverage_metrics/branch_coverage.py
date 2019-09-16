@@ -50,7 +50,7 @@ class BranchCoverage(StatementCoverage):
     def total_items_of(self, module_path, of_type=None):
         tracee_module = self.project_cfg.module_cfgs.get(module_path)
         if not tracee_module:
-            return []
+            return set()
         branches = tracee_module.branches
 
         return branches

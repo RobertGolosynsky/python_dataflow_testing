@@ -56,7 +56,7 @@ class DefUsePairsCoverage(Coverage):
     def total_items_of(self, module_path, of_type=CoverageMetric.ALL_PAIRS):
         module = self.project_cfg.module_cfgs.get(module_path)
         if not module:
-            return []
+            return set()
         if of_type == CoverageMetric.M_ONLY:
             return module.intramethod_pairs
         elif of_type == CoverageMetric.IM_ONLY:
