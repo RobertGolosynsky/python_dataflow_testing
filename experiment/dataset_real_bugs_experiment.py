@@ -18,7 +18,7 @@ if __name__ == "__main__":
                                  no_errors=True)
 
     dataset_path = Path(__file__).parent.parent.parent / "dataset_bugs"
-    graphs_path = Path(__file__).parent.parent.parent / "graphs_bugs"
+    graphs_path_parent = Path(__file__).parent.parent.parent / "graphs_bugs"
     projects = []
     extra_requirements = [r.strip() for r in open("../requirements.txt").readlines()]
 
@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
             if len(new_failing_node_ids) > 0:
                 node_ids = " ".join(new_failing_node_ids)
-                graphs_path = graphs_path/buggy_project.project_name
+                graphs_path = graphs_path_parent/buggy_project.project_name
                 buggy_project.run_command(
                         f"python3 {real_bugs_experiment_path} --node_ids {node_ids} --graphs_folder={graphs_path} --test_suite_sizes_count=20 --test_suite_coverages_count=20 --max_trace_size=10",
                         extra_requirements=extra_requirements

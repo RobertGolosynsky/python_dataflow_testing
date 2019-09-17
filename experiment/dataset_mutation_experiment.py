@@ -19,7 +19,7 @@ if __name__ == "__main__":
                                  no_errors=True)
 
     dataset_path = Path(__file__).parent.parent.parent / "dataset_mutation"
-    graphs_path = Path(__file__).parent.parent.parent/"graphs_mutation"
+    graphs_path_parent = Path(__file__).parent.parent.parent/"graphs_mutation"
     projects = []
     extra_requirements = [r.strip() for r in open("../requirements.txt").readlines()]
     timeout = 30*60
@@ -41,7 +41,7 @@ if __name__ == "__main__":
                 project.delete_from_disk()
             else:
                 projects.append(project)
-                graphs_path = graphs_path / project.project_name
+                graphs_path = graphs_path_parent / project.project_name
                 project.run_command(
                     f"python3 {mutation_experiment_path} --max_select=5 --graphs_folder={graphs_path} --test_suite_sizes_count=20 --test_suite_coverages_count=20 --max_trace_size=10 --timeout={timeout}",
                     extra_requirements=extra_requirements
