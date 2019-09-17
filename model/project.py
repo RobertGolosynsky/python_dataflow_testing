@@ -24,6 +24,7 @@ dataset_folder = "dataset"
 
 
 class Project(object):
+    commands_sep = " ; "
     venv_folder_name = "venv"
     activate_this_file_name = "activate_this.py"
     bin_folder_name = "bin"
@@ -74,7 +75,7 @@ class Project(object):
 
         cmds.append(cmd)
 
-        extended_cmd = " && ".join(cmds)
+        extended_cmd = self.commands_sep.join(cmds)
         print("Running", extended_cmd, "in", self._path)
         proc = subprocess.run(extended_cmd, **kw)
 
@@ -98,7 +99,7 @@ class Project(object):
 
         cmds = [activate_venv, cmd]
 
-        extended_cmd = " && ".join(cmds)
+        extended_cmd = self.commands_sep.join(cmds)
         print("Running", extended_cmd, "in", self._path)
         proc = subprocess.run(extended_cmd, **kw)
 
