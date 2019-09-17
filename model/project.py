@@ -15,6 +15,8 @@ from util.find import find_files
 
 pytest_failed_node_ids_path = pytest_failed_node_ids.__file__
 pytest_collect_test_modules_path = pytest_collect_test_modules.__file__
+through_requirements_path = pathlib.Path(__file__).parent.parent / "requirements.txt"
+assert through_requirements_path.is_file()
 dataset_folder = "dataset"
 
 
@@ -26,23 +28,8 @@ class Project(object):
     activate_this_file_name = "activate_this.py"
     bin_folder_name = "bin"
     exclude_folders = ["venv", "__pycache__"]
-    thorough_requirements = """
-pipfile
-peewee
-virtualenv
-pytest
-pytest-cov
-loguru
-cppimport
-pandas
-numpy
-matplotlib==2.2.2
-networkx==2.1
-xdis==4.0.1
--e git+git://github.com/RobertGolosynsky/mutmut.git#egg=mutmut
--e git+git://github.com/rocky/python-control-flow#egg=control-flow
-pygraphviz
-""".split("\n")
+    thorough_requirements = [r.strip() for r in open(through_requirements_path).readlines()]
+
 
     def __init__(self, project_path):
         self.venv_activated = False

@@ -17,8 +17,9 @@ if __name__ == "__main__":
                                  unique_repos=True,
                                  no_errors=True)
 
-    dataset_path = Path(__file__).parent.parent.parent / "dataset_bugs"
-    graphs_path_parent = Path(__file__).parent.parent.parent / "graphs_bugs"
+    results_root = Path(__file__).parent.parent.parent / "1experiments_results"
+    dataset_path = results_root / "dataset_bugs"
+    graphs_path_parent = results_root / "graphs_bugs"
     projects = []
     extra_requirements = [r.strip() for r in open("../requirements.txt").readlines()]
 
