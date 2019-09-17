@@ -65,8 +65,6 @@ def definition_use_pairs(cfg: nx.DiGraph,
                                           initial_set=initial_set,
                                           object_vars_only=object_vars_only)
 
-    # for node in sorted(reaching_deffs):
-    #     print("node:",node," -> "," ".join(str(var) for var in reaching_deffs[node]))
     for node in cfg.nodes():
         node_attrs = cfg.nodes[node]
         use = node_attrs.get(du.USE_KEY, None)
@@ -164,9 +162,6 @@ def reaching_definitions(cfg: nx.DiGraph, initial_set=None, object_vars_only=Fal
             node_reach_out = node_reach_in
 
         reach_out[a_node] = node_reach_out
-        # print("after ", node_reach_out)
-        # print(node_reach_out, old_val)
-        # print("node:", a_node, " -> ", " ".join(str(var) for var in node_reach_out))
 
         if not node_reach_out == old_val:
             working_list.update(cfg.successors(a_node))

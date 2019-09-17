@@ -15,10 +15,8 @@ def_use_pairs_ext = load_cpp_extension("def_use_pairs_ext")
 def analyze_trace(trace_file, py_var_index):
     np_array, file_size = read_df(trace_file, cut=-1)
 
-
     st = time()
     defs, uses = py_var_index.get_vars(np_array)
-    # pairs_cpp_new = cpp_pairs_new(*_drop_where_no_def_no_use(np_array, defs, uses))
     pairs_cpp_new = cpp_pairs_new(np_array, defs, uses)
     total_new = time() - st
 
@@ -26,14 +24,9 @@ def analyze_trace(trace_file, py_var_index):
 
     print("total cpp new", total_new)
     print("Speed: {}Mb/s".format(file_size // total_new))
-
-    # print("New variant is {} times faster".format(int(total_old / total_new)))
-    # print("Old found {} pairs, new found {} pairs".format(pairs_count_old, pairs_count_new))
     print("New found {} pairs".format(pairs_count_new))
     unique_pairs = _unique_pairs(pairs_cpp_new)
     print("Unique pairs {}".format(len(unique_pairs)))
-
-    # print_pairs(pairs_cpp_new)
 
     del pairs_cpp_new
     del np_array
@@ -47,30 +40,8 @@ def analyze_trace(trace_file, py_var_index):
 @timing
 def analyze_trace_w_index(trace_file, cpp_var_index, cut=-1):
     np_array, file_size = read_df(trace_file, cut=cut)
-    # with np.printoptions(precision=3, linewidth=100):
-    #     print(np_array)
-    # st = time()
     pairs_cpp_new = cpp_pairs_w_index(np_array, cpp_var_index)
-    # print_rows(pairs_cpp_new)
-    # total_new = time() - st
-
-    # pairs_count_new = _count_pairs(pairs_cpp_new)
-
-    # print("total with index", total_new)
-    # print("Speed: {}Mb/s".format(file_size // total_new))
-
-    # print("New variant is {} times faster".format(int(total_old / total_new)))
-    # print("Old found {} pairs, new found {} pairs".format(pairs_count_old, pairs_count_new))
-    # print("With index found {} pairs".format(pairs_count_new))
     unique_pairs = _unique_pairs(pairs_cpp_new)
-    # print("Unique pairs {}".format(len(unique_pairs)))
-
-    # print_pairs(pairs_cpp_new)
-
-    # del pairs_cpp_new
-    # del np_array
-    # gc.collect()
-
     return unique_pairs
 
 
