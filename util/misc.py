@@ -1,5 +1,6 @@
 import itertools
 from functools import wraps
+from pathlib import Path
 from time import time
 
 
@@ -50,3 +51,11 @@ def get_timing(f):
 
 def scale(number, lower_bound, upper_bound):
     return lower_bound + (upper_bound - lower_bound) * number
+
+def maybe_expand(path):
+    p = Path(path)
+    if p.is_absolute():
+        return str(p)
+    else:
+        return str(p.resolve())
+

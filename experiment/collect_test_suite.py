@@ -36,6 +36,8 @@ def generate_test_suites_fixed_size(data,
                                     check_unique_items_covered=True,
                                     consecutive_failures_allowed=20
                                     ) -> List[SubTestSuite]:
+    if len(total_coverage_items) == 0:
+        return []
     suites = set()
     suites_cases = set()
     covered_item_sets = set()
@@ -81,10 +83,12 @@ def generate_test_suites_fixed_coverage(data,
                                         check_unique_items_covered=True,
                                         consecutive_failures_allowed=20
                                         ) -> List[SubTestSuite]:
+    total_coverage_items_count = len(total_coverage_items)
+    if total_coverage_items_count == 0:
+        return []
     suites = set()
     suites_cases = set()
     covered_item_sets = set()
-    total_coverage_items_count = len(total_coverage_items)
     failure_count = 0
     while len(suites) < n:
         if failure_count > consecutive_failures_allowed:
@@ -100,11 +104,8 @@ def generate_test_suites_fixed_coverage(data,
         if check_unique_items_covered:
             covers_unique_items = covered_items not in covered_item_sets
             should_check_further = covers_unique_items
-            # print("covers_unique_items", covers_unique_items)
         else:
             should_check_further = True
-        # if frozenset(suite) in suites_cases:
-        # print("Duplicate test suite")
         if should_check_further:
             coverage = percent(covered_items, total_coverage_items)
             ts = SubTestSuite(suite, coverage, covered_items, total_coverage_items)
@@ -115,8 +116,6 @@ def generate_test_suites_fixed_coverage(data,
                 suites_cases.add(frozenset(suite))
             else:
                 failure_count += 1
-            # else:
-            #     print("Created a duplicate test suite")
         else:
             failure_count += 1
     suites = list(sorted(suites, key=operator.attrgetter("coverage"), reverse=True))
@@ -152,10 +151,7 @@ def generate_suite_of_fixed_size(node_ids_coverage_items: dict, exact_size):
         node_id = pick_next_node(node_ids_coverage_items, suite, covered_items)
         suite.add(node_id)
         node_coverage = node_ids_coverage_items[node_id]
-        # prev_covered = len(covered_items)
         covered_items.update(node_coverage)
-        # if prev_covered == len(covered_items):
-        #     print("Suite of size {} has max coverage possible".format(len(suite)))
     return suite
 
 
@@ -185,8 +181,6 @@ def pick_next_node(node_ids_coverage_items: dict,
     node_ids_maximising = [node_id for node_id, cov_items_set in filtered_ids.items()
                            if len(cov_items_set - covered_items) > 0]
     if node_ids_maximising:
-        # print("Adding case that increases coverage")
         return random.choice(node_ids_maximising)
     else:
-        # print("Coverage maximised, adding random case")
         return random.choice(list(filtered_ids.keys()))

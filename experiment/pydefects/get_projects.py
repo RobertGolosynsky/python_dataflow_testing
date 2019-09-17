@@ -35,7 +35,7 @@ class RepositoryManager:
         git_repo = Repo.clone_from(self.repo.homepage, parent_path)
         parent = git_repo.commit(self.commit.hash)
         git_repo.git.checkout(parent.parents[0])
-
+        return parent_path
     def __repr__(self):
         return f"""
         Repo:       {self.name} @ {self.commit.hash}

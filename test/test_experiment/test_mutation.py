@@ -36,7 +36,8 @@ tests/test_node.py::TestNode::test_create
         killed, total = killed_mutants(
             project_root=str(root),
             path_to_module_under_test=str(module_under_test),
-            test_cases_ids=cases.split()
+            test_cases_ids=cases.split(),
+            timeout=None
         )
         s = set()
         for m in killed.values():

@@ -134,3 +134,9 @@ def killed_mutants(path_to_module_under_test, test_cases_ids,
             os.chdir(save_working_dir)
 
     return killed, total
+
+
+def remove_mutmut_cache(project_root):
+    cache_file = Path(project_root) / ".mutmut-cache"
+    if cache_file.exists():
+        os.remove(cache_file)

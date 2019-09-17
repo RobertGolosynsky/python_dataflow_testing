@@ -69,6 +69,18 @@ class TraceReader:
         file_id = self.files_mapping.get_int(module_under_test_path)
         return self.main_root/str(folder_id)/(str(file_id)+os.extsep+Tracer.trace_file_ext)
 
+    def get_modules_covered_by(self, node_id):
+        folder_index = self.folders_mapping.get_int(node_id)
+        if not folder_index:
+            logger.warning("Node {node_id} was not found in traces",node_id=node_id)
+            return []
+
+        node_trace_folder = self.main_root/str(folder_index)
+        modules_indexes = set()
+        for trace_file in node_trace_folder.iterdir():
+            modules_indexes.add(int(trace_file.stem))
+
+        return [self.files_mapping.get_string(i) for i in modules_indexes]
 
 def read_df(f, cut=-1, max_size_mb=None):
     logger.debug("Reading trace {f}", f=f)

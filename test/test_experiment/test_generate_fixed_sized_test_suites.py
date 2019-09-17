@@ -37,17 +37,3 @@ class TestCreateTestSuites(unittest.TestCase):
             n=10
         )
         self.assertTrue(len(suites) > 0)
-
-        # mutation_testing_results = []
-        #
-        #
-        # for suite in suites:
-        #     st = time()
-        #     res = run_mutation(project_root=project_root,
-        #                        module_under_test=module_under_test_path,
-        #                        test_cases=[tc.to_node_id() for tc in suite.test_cases],
-        #                        tests_root="tests",
-        #                        no_cache=True
-        #                        )
-        #     print("One test suite takes {} seconds to be tested ".format(int(time()-st)))
-        #     mutation_testing_results.append(res)

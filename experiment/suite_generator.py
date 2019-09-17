@@ -67,8 +67,9 @@ class SuiteGenerator:
                             check_unique_items_covered=True,
                             test_cases=None
                             ) -> List[SubTestSuite]:
-
         coverage_report, total_items = self._get_total_items(coverage_metric, module_under_test_path, test_cases)
+        if len(total_items) == 0:
+            return []
         suites = generate_test_suites_fixed_coverage(
             data=coverage_report,
             n=n,

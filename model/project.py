@@ -2,7 +2,9 @@ import os
 import shutil
 import subprocess
 import sys
-import urllib.request
+
+import pytest_collect_test_modules
+import pytest_failed_node_ids
 import pathlib
 from typing import List, Union
 import pipfile
@@ -11,7 +13,11 @@ from loguru import logger
 
 from util.find import find_files
 
+pytest_failed_node_ids_path = pytest_failed_node_ids.__file__
+pytest_collect_test_modules_path = pytest_collect_test_modules.__file__
 dataset_folder = "dataset"
+
+
 # activate_this_py_url = "https://raw.githubusercontent.com/pypa/virtualenv/master/virtualenv_embedded/activate_this.py"
 
 
@@ -68,12 +74,12 @@ pygraphviz
         if not extra_requirements:
             extra_requirements = []
         kw = {
-            "stdout": sys.stderr,
-            "stderr": subprocess.PIPE,
+            "stdout": sys.stdout,
+            "stderr": sys.stderr,
             "shell": True,
             "cwd": self._path
         }
-        packages = [p for p in self.requirements+extra_requirements if p.strip() != ""]
+        packages = [p for p in self.requirements + extra_requirements if p.strip() != ""]
         activate_venv = f". {self.venv_folder_name}/bin/activate"
         cmds = [activate_venv]
         for package in packages:
@@ -85,22 +91,77 @@ pygraphviz
         print("Running", extended_cmd, "in", self._path)
         proc = subprocess.run(extended_cmd, **kw)
 
-        print("Errors:")
-        print("=" * 100)
-        print(proc.stderr.decode("utf-8"))
-        print("=" * 100)
         return proc.returncode
 
-    # def tests_fail(self):
-    #     return self.run_command("pytest -q", extra_requirements=["pytest"]) != 0
+    def run_command_capture_output(self, cmd, extra_requirements=None):
+        if not extra_requirements:
+            extra_requirements = []
+        kw = {
+            "stdout": subprocess.PIPE,
+            "stderr": subprocess.PIPE,
+            "shell": True,
+            "cwd": self._path
+        }
+        # packages = [p for p in self.requirements + extra_requirements if p.strip() != ""]
+        activate_venv = f". {self.venv_folder_name}/bin/activate"
+
+        # for package in packages:
+        #     cmds.append(f"pip3 install {package}")
+        self.run_command("echo Hello", extra_requirements=extra_requirements)
+
+        cmds = [activate_venv, cmd]
+
+        extended_cmd = " && ".join(cmds)
+        print("Running", extended_cmd, "in", self._path)
+        proc = subprocess.run(extended_cmd, **kw)
+
+        return proc.returncode, proc.stdout.decode(), proc.stderr.decode()
+
+    def run_tests_get_failed_node_ids(self):
+        extra_requirements = """
+pytest
+""".split("\n")
+        code, out, err = self.run_command_capture_output(f"python3 {pytest_failed_node_ids_path}",
+                                                         extra_requirements=extra_requirements)
+        print("=" * 100)
+        print(out)
+        print("=" * 100)
+        print(err)
+        failed_cases = []
+        for line in out.split("\n"):
+            clean = line.strip()
+            if clean:
+                failed_cases.append(clean)
+        return failed_cases
+
+    def collect_test_modules(self):
+        extra_requirements = """
+pytest
+""".split("\n")
+        code, out, err = self.run_command_capture_output(f"python3 {pytest_collect_test_modules_path}",
+                                                         extra_requirements=extra_requirements)
+        print("=" * 100)
+        print(out)
+        print("=" * 100)
+        print(err)
+        test_modules_paths = []
+        for line in out.split("\n"):
+            clean = line.strip()
+            if clean:
+                test_modules_paths.append(clean)
+        return test_modules_paths
 
     def tests_fail(self):
+        return self.run_command("pytest") != 0
+
+    def tracing_fails(self):
         return self.run_command("python3 /home/robert/Documents/master/code/python_dataflow_testing/thorough.py -t",
                                 extra_requirements=self.thorough_requirements) != 0
 
     def find_test_modules(self):
         modules = []
-        for f in find_files(self._path, ".py", self.exclude_folders, [], exclude_hidden_directories=True):
+        for f in find_files(self._path, ".py", self.exclude_folders, [],
+                            exclude_hidden_directories=True):
             if os.path.basename(f)[:4].lower() == "test":
                 modules.append(f)
         return modules
@@ -163,3 +224,29 @@ pygraphviz
 
     def delete_from_disk(self):
         shutil.rmtree(self._path)
+
+
+class Merger:
+    def __init__(self, fixed_proj, buggy_proj):
+        self.fixed_proj = fixed_proj
+        self.buggy_proj = buggy_proj
+
+    def move_test_from_fixed_to_buggy(self):
+        fixed_project_test_modules = self.fixed_proj.collect_test_modules()
+        buggy_project_test_modules = self.buggy_proj.collect_test_modules()
+
+        self.remove_all(self.buggy_proj._path, buggy_project_test_modules)
+
+        for test_module_path in fixed_project_test_modules:
+            self.move(self.fixed_proj._path, self.buggy_proj._path, test_module_path)
+
+    def move(self, old_parent, new_parent, path):
+
+        shutil.copy(
+            os.path.join(old_parent, path),
+            os.path.join(new_parent, path)
+        )
+
+    def remove_all(self, parent_path, paths):
+        for file in paths:
+            os.remove(os.path.join(parent_path, file))
