@@ -159,3 +159,7 @@ tracing/cpp_tracing/cached_m/
 **/.coverage_cache
 **/.flow_graph
 **/.mutmut_cache
+/dataset/linked_list_clean/
+/experiment/pydefects.db
+/experiment/pydefects.db-shm
+/experiment/pydefects.db-wal
