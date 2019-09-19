@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List
 
 from git import Repo
+from loguru import logger
 from playhouse.sqlite_ext import SqliteExtDatabase
 
 from experiment.pydefects.database.models import DATABASE_PROXY, Repository, TestResults, Commit, \
@@ -21,21 +22,30 @@ class RepositoryManager:
     def path_to_repo(self, folder_path):
         return os.path.join(folder_path, f"{self.repo.name}_{self.commit.hash}")
 
-    def clone_to(self, path):
+    def clone_to(self, path, overwrite_if_exists=False):
         checkout_path = self.path_to_repo(path)
+        if not overwrite_if_exists and Path(checkout_path).is_dir():
+            logger.info("Repo was already cloned, using previous version")
+            return checkout_path
+        logger.info("Cloning from {url}:{commit}", url=self.repo.homepage,commit=self.commit.hash)
         git_repo = Repo.clone_from(self.repo.homepage, checkout_path)
         git_repo.git.checkout(self.commit.hash)
         return checkout_path
 
-    def clone_parent_to(self, path):
+    def clone_parent_to(self, path, overwrite_if_exists=False):
         parent_path = os.path.join(
             path,
             f"{self.repo.name}_{self.commit.hash}_parent"
         )
+        if not overwrite_if_exists and Path(parent_path).is_dir():
+            logger.info("Repo was already cloned, using previous version")
+            return parent_path
+        logger.info("Cloning from {url}:{commit}", url=self.repo.homepage, commit=self.commit.hash)
         git_repo = Repo.clone_from(self.repo.homepage, parent_path)
         parent = git_repo.commit(self.commit.hash)
         git_repo.git.checkout(parent.parents[0])
         return parent_path
+
     def __repr__(self):
         return f"""
         Repo:       {self.name} @ {self.commit.hash}

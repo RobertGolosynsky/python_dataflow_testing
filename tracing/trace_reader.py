@@ -82,6 +82,13 @@ class TraceReader:
 
         return [self.files_mapping.get_string(i) for i in modules_indexes]
 
+    def get_modules_covered_by_nodes(self, node_ids):
+        modules = set()
+        for node_id in node_ids:
+            modules.update(self.get_modules_covered_by(node_id))
+        return modules
+
+
 def read_df(f, cut=-1, max_size_mb=None):
     logger.debug("Reading trace {f}", f=f)
     file_size = os.stat(f).st_size // (1024 * 1024)

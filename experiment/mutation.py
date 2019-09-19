@@ -13,6 +13,7 @@ from typing import List
 
 from glob2 import glob
 from joblib import Memory
+from loguru import logger
 from mutmut import MutationID, Context
 from mutmut.__main__ import time_test_suite, python_source_files, add_mutations_by_file, Config, run_mutation_tests, \
     run_mutation, mutate_file, tests_pass, tests_pass_expanded
@@ -21,7 +22,8 @@ import random
 
 from tqdm import tqdm
 
-memory = Memory(location=".cached_mutants", verbose=0)
+cache_location = Path(".cached_mutants").resolve()
+memory = Memory(location=cache_location, verbose=10000)
 
 
 @memory.cache(ignore=["timeout"], verbose=100000)
@@ -29,6 +31,7 @@ def killed_mutants(path_to_module_under_test, test_cases_ids,
                    project_root,
                    timeout=None
                    ):
+    logger.debug("Killed mutants of project {proj} will be saved in folder {f}", proj=project_root, f=cache_location)
     test_time_multiplier = 2.0
     test_time_base = 0.0
     swallow_output = True
