@@ -34,7 +34,7 @@ def run_real_bugs_experiment_fixed_size(
         revealing_node_ids = set(revealing_node_ids)
     total_failing_node_ids = len(revealing_node_ids)
 
-    scoring_function = get_scoring_function(total_failing_node_ids)
+    scoring_function = get_scoring_function(revealing_node_ids)
     points = generic_experiment_size(
         project_root,
         module_under_test_path,
@@ -65,7 +65,7 @@ def run_real_bugs_experiment_fixed_coverage(
         revealing_node_ids = set(revealing_node_ids)
     total_failing_node_ids = len(revealing_node_ids)
 
-    scoring_function = get_scoring_function(total_failing_node_ids)
+    scoring_function = get_scoring_function(revealing_node_ids)
     points = generic_experiment_coverage(
         project_root,
         module_under_test_path,
