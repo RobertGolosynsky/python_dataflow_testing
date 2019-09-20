@@ -34,7 +34,7 @@ def generate_test_suites_fixed_size(data,
                                     total_coverage_items: set,
                                     exact_size,
                                     check_unique_items_covered=True,
-                                    consecutive_failures_allowed=20
+                                    consecutive_failures_allowed=100
                                     ) -> List[SubTestSuite]:
     if len(total_coverage_items) == 0:
         return []
@@ -149,6 +149,8 @@ def generate_suite_of_fixed_size(node_ids_coverage_items: dict, exact_size):
     covered_items.update(node_ids_coverage_items[initial_node])
     for _ in range(exact_size - 1):
         node_id = pick_next_node(node_ids_coverage_items, suite, covered_items)
+        if node_id is None:
+            return suite
         suite.add(node_id)
         node_coverage = node_ids_coverage_items[node_id]
         covered_items.update(node_coverage)
@@ -167,6 +169,8 @@ def generate_suite_of_fixed_coverage(node_ids_coverage_items: dict, total_items,
         if len(suite) == len(node_ids):
             return None
         node_id = pick_next_node(node_ids_coverage_items, suite, covered_items)
+        if node_id is None:
+            return suite
         suite.add(node_id)
         node_coverage = node_ids_coverage_items[node_id]
         covered_items.update(node_coverage)
@@ -183,4 +187,5 @@ def pick_next_node(node_ids_coverage_items: dict,
     if node_ids_maximising:
         return random.choice(node_ids_maximising)
     else:
-        return random.choice(list(filtered_ids.keys()))
+        return None
+        # return random.choice(list(filtered_ids.keys()))
