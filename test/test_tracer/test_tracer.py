@@ -28,7 +28,7 @@ class TestTracer(unittest.TestCase):
 
         exclude_folders = ["venv"]
         thorough_location = str(PROJECT_ROOT / "thorough.py")
-        subprocess.run(f"python3 {thorough_location} -t -trace_dir {str(project_root)}", cwd=project_root, shell=True)
+        subprocess.run(f"python3 {thorough_location} -t --trace_dir {str(project_root)}", cwd=project_root, shell=True)
         trace_root = project_root
         trace_reader = TraceReader(trace_root)
         failed_cases = trace_reader.read_failed_test_cases()

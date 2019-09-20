@@ -45,7 +45,7 @@ class TraceReader:
         file_name = _filename(file_index)
         paths = []
         node_ids = []
-        if not selected_node_ids:
+        if selected_node_ids is None:
             selected_node_ids = self.get_node_ids()
 
         for node_id in selected_node_ids:
