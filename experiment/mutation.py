@@ -58,15 +58,9 @@ def killed_mutants(path_to_module_under_test, test_cases_ids,
         using_testmon=False
     )
 
-    mutations_by_file = {}
+    mutations: List[MutationID] = get_mutants_of(path_to_module_under_test)
 
-    update_line_numbers(path_to_module_under_test)
-    add_mutations_by_file(mutations_by_file=mutations_by_file, filename=path_to_module_under_test,
-                          dict_synonyms=dict_synonyms, config=None)
-
-    mutations: List[MutationID] = mutations_by_file[path_to_module_under_test]
-
-    total = sum(len(mutations) for mutations in mutations_by_file.values())
+    total = len(mutations)
 
     timed_out_mutants = set()
     killed = defaultdict(set)
@@ -143,3 +137,13 @@ def remove_mutmut_cache(project_root):
     cache_file = Path(project_root) / ".mutmut-cache"
     if cache_file.exists():
         os.remove(cache_file)
+
+
+def get_mutants_of(path_to_module_under_test):
+    mutations_by_file = {}
+
+    update_line_numbers(path_to_module_under_test)
+    add_mutations_by_file(mutations_by_file=mutations_by_file, filename=path_to_module_under_test,
+                          dict_synonyms=[""], config=None)
+
+    return mutations_by_file[path_to_module_under_test]
