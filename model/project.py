@@ -2,6 +2,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 
 import pytest_collect_test_modules
 import pytest_failed_node_ids
@@ -38,6 +39,7 @@ class Project(object):
         self.tests = []
         self.requirements = self._extract_necessary_packages()
         self.installed_packages = set()
+        self.testing_time = 0
 
     def __repr__(self):
         return "<Project, path={}>".format(self.path)
@@ -80,7 +82,7 @@ class Project(object):
                 installed_packages.append(clean)
         return installed_packages
 
-    def run_command(self, cmd, extra_requirements=None, capture_output=False, activate_only=False):
+    def run_command(self, cmd, extra_requirements=None, capture_output=False, activate_only=False, timeout=None):
         if not extra_requirements:
             extra_requirements = []
 
@@ -94,6 +96,8 @@ class Project(object):
         packages = [p for p in self.requirements + extra_requirements if p.strip() != ""]
 
         activate_venv = f". {self.venv_folder_name}/bin/activate"
+        if timeout:
+            cmd = f"timeout {timeout} " + cmd
         cmds = [activate_venv]
         if activate_only:
             cmds.append(cmd)
@@ -115,20 +119,30 @@ class Project(object):
         else:
             return proc.returncode
 
-    def run_command_capture_output(self, cmd, extra_requirements=None, activate_only=False):
+    def run_command_capture_output(self, cmd, extra_requirements=None, activate_only=False, timeout=None):
         if extra_requirements is None:
             extra_requirements = []
         _ = self.run_command("", extra_requirements=extra_requirements, activate_only=False)
         proc = self.run_command(cmd, extra_requirements=extra_requirements, capture_output=True,
-                                activate_only=activate_only)
+                                activate_only=activate_only, timeout=timeout)
         return proc.returncode, proc.stdout.decode(), proc.stderr.decode()
 
     def run_tests_get_failed_node_ids(self):
+        st = time.time()
+        if self.testing_time > 0:
+            timeout = int(self.testing_time)*10
+        else:
+            timeout = None
+
         extra_requirements = """
 pytest
 """.split("\n")
-        code, out, err = self.run_command_capture_output(f"python3 {pytest_failed_node_ids_path}",
-                                                         extra_requirements=extra_requirements)
+        code, out, err = self.run_command_capture_output(
+            f"python3 {pytest_failed_node_ids_path}",
+            extra_requirements=extra_requirements,
+            timeout=timeout
+        )
+        self.testing_time = time.time() - st
         print("SDTOUT=" * 100)
         print(out)
         print("SDTERR=" * 100)
