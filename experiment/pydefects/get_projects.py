@@ -2,6 +2,8 @@ import os
 from pathlib import Path
 from typing import List
 import shutil
+
+import requests as requests
 from git import Repo
 from loguru import logger
 from playhouse.sqlite_ext import SqliteExtDatabase
@@ -30,6 +32,9 @@ class RepositoryManager:
             return checkout_path
         shutil.rmtree(checkout_path, ignore_errors=True)
         logger.info("Cloning from {url}:{commit}", url=self.repo.homepage, commit=self.commit.hash)
+        r = requests.get(self.repo.homepage)
+        if r.status_code == 404:
+            raise IOError("Git repo not found")
         git_repo = Repo.clone_from(self.repo.homepage, checkout_path)
         git_repo.git.checkout(self.commit.hash)
         return checkout_path
@@ -44,10 +49,13 @@ class RepositoryManager:
             return parent_path
         shutil.rmtree(parent_path, ignore_errors=True)
         logger.info("Cloning from {url}:{commit}", url=self.repo.homepage, commit=self.commit.hash)
+        r = requests.get(self.repo.homepage)
+        if r.status_code == 404:
+            raise IOError("Git repo not found")
         git_repo = Repo.clone_from(self.repo.homepage, parent_path)
         parent = git_repo.commit(self.commit.hash)
         git_repo.git.checkout(parent.parents[0])
-        return parent_path
+        return parent_path, parent.parents[0]
 
     def __repr__(self):
         return f"""
@@ -82,7 +90,7 @@ def get_projects(
             "foreign_key": 1,
             "ignore_check_constraints": 9,
             "synchronous": 0,
-        },
+        }
     )
     DATABASE_PROXY.initialize(db)
 
