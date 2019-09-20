@@ -19,7 +19,12 @@ class Function:
         fake_module = ast.Module([_clean_function_node(function_def)])
         namespace = {}
         fake_module_code = compile(fake_module, "", mode="exec")
-        exec(fake_module_code, namespace)
+        try:
+            exec(fake_module_code, namespace)
+        except Exception as e:
+            logger.error(str(e))
+            logger.error("Ast dump of function: {d}", d=ast.dump(function_def))
+            # TODO: fix this error
         function = Function(namespace[fn_name], line, args)
         if first_lines:
             function.add_end_line(first_lines)
