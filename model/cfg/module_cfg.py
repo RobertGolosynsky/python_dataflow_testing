@@ -9,7 +9,7 @@ class ModuleCFG(object):
         self.module_path = module_path
         self.function_cfgs = {}
         self.class_cfgs = {}
-
+        self.is_full_cfg = True
         fns, clss, calls = au.compile_module(module_path)
 
         self.definitions = {}
@@ -29,7 +29,8 @@ class ModuleCFG(object):
                 self.function_cfgs[fn_name] = func_cfg
                 self.definitions.update(func_cfg.definitions)
                 self.uses.update(func_cfg.uses)
-
+            else:
+                self.is_full_cfg = False
         self.intramethod_pairs = self._calculate_intra_method()
         self.intermethod_pairs = self._calculate_intermethod()
         self.interclass_pairs = self._calculate_interclass()

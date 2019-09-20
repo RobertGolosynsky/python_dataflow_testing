@@ -1,6 +1,8 @@
 import os
 from collections import defaultdict
 from loguru import logger
+
+from config import COMMON_EXCLUDE
 from model.cfg.module_cfg import ModuleCFG
 from util.find import find_files
 import pathlib
@@ -17,6 +19,8 @@ class ProjectCFG:
 
     @staticmethod
     def create_from_path(project_path, exclude_folders=None, exclude_files=None, use_cached_if_possible=True):
+        if not exclude_folders:
+            exclude_folders = COMMON_EXCLUDE
         module_paths = find_files(project_path, ".py", exclude_folders, exclude_files, exclude_hidden_directories=True)
         project_changed = ProjectCFG._check_project_changed(project_path, module_paths)
         if project_changed:
@@ -110,7 +114,7 @@ class ProjectCFG:
     def _calculate_project_hash(module_paths):
         h = hashlib.sha1()
         for f_path in module_paths:
-            with open(f_path) as f:
+            with open(f_path, encoding="utf-8") as f:
                 h.update(f.read().encode("utf-8"))
         return h.hexdigest()
 
