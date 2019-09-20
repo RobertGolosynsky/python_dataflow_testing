@@ -74,10 +74,9 @@ def run_real_bugs_experiment_fixed_coverage(
         max_trace_size=max_trace_size,
         coverage_metrics=coverage_metrics
     )
-    intermediate_column = SUITE_COVERAGE + "_"
-    df = pd.DataFrame(data=points, columns=[SUITE_SIZE, METRIC, BUG_REVEALED_SCORE, intermediate_column])
-    df = bin_zero_to_one_column_to_percent(df, intermediate_column, SUITE_COVERAGE, coverage_boundaries_count)
 
+    df = pd.DataFrame(data=points, columns=[SUITE_SIZE, METRIC, BUG_REVEALED_SCORE, SUITE_COVERAGE])
+    df = bin_zero_to_one_column_to_percent(df, SUITE_COVERAGE, SUITE_COVERAGE_BIN, coverage_boundaries_count)
     return df, total_failing_node_ids
 
 

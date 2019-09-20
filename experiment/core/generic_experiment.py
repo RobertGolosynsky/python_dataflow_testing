@@ -128,14 +128,13 @@ def generic_experiment_coverage(
 
 
 def bin_zero_to_one_column_to_percent(df, column_to_bin, bin_column_name, bin_count):
-
     bins = np.linspace(0, 100, num=bin_count + 1, dtype=int, endpoint=True)
     bin_labels = [f"[{int(np.floor(l))}-{int(np.ceil(r))}]" for l, r in zip(bins[:-1], bins[1:])]
     kw = {bin_column_name: lambda x: pd.cut(x[column_to_bin], bins=bins, labels=bin_labels)}
 
-    df:pd.DataFrame = df.assign(**kw)
-    df.to_csv("box_plot_data.csv")
+    df: pd.DataFrame = df.assign(**kw)
     return df
+
 
 def project_stats(cfg):
     stats = []
@@ -181,6 +180,28 @@ def image_path(graphs_path, project_root, module_path, mark):
     rel_p = str(Path(module_path).relative_to(project_root))
 
     file_name = pname + "@" + rel_p.replace("/", "::") + "::" + mark + ".png"
+
+    image_p = os.path.join(graphs_path, file_name)
+    os.makedirs(graphs_path, exist_ok=True)
+    return image_p
+
+
+def df_path(graphs_path, project_root, module_path, mark):
+    pname = Path(project_root).name
+    rel_p = str(Path(module_path).relative_to(project_root))
+
+    file_name = pname + "@" + rel_p.replace("/", "::") + "::" + mark + ".csv"
+
+    image_p = os.path.join(graphs_path, file_name)
+    os.makedirs(graphs_path, exist_ok=True)
+    return image_p
+
+
+def module_path(graphs_path, project_root, module_path, mark):
+    pname = Path(project_root).name
+    rel_p = str(Path(module_path).relative_to(project_root))
+
+    file_name = pname + "@" + rel_p.replace("/", "::") + "::" + mark + ".py"
 
     image_p = os.path.join(graphs_path, file_name)
     os.makedirs(graphs_path, exist_ok=True)

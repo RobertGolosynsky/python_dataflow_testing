@@ -5,8 +5,8 @@ from pathlib import Path
 
 from experiment.core.mutation_experiment import run_mutation_experiment_fixed_size, SUITE_SIZE, MUTATION_SCORE, METRIC, \
     run_mutation_experiment_fixed_coverage, SUITE_COVERAGE_BIN
-from experiment.core.generic_experiment import image_path, select_modules
-from experiment.core.visualization import create_box_plot
+from experiment.core.generic_experiment import image_path, select_modules, df_path, module_path
+from experiment.core.visualization import create_box_plot, create_cat_plot_with_count
 from util.misc import maybe_expand
 
 if __name__ == "__main__":
@@ -37,6 +37,7 @@ if __name__ == "__main__":
 
 
     def experiment(module):
+
         df_fixed_size, total_mutants = run_mutation_experiment_fixed_size(
             project_root,
             module,
@@ -44,16 +45,26 @@ if __name__ == "__main__":
             max_trace_size,
             args.timeout
         )
+        plot_type = "fixed_size_box_plot"
         title = f"{Path(module).name}, {total_mutants} mutants"
-        image_p = image_path(graphs_folder, project_root, module, "fixed_size")
+        df_p = df_path(graphs_folder, project_root, module, plot_type)
+        df_fixed_size.to_csv(df_p)
 
+        image_p = image_path(graphs_folder, project_root, module, plot_type)
         create_box_plot(df_fixed_size, title, image_p,
                         x=SUITE_SIZE, y=MUTATION_SCORE, hue=METRIC,
                         xlabel="Test suite size", ylabel="Mutants killed (%)")
 
-        new_module_path = image_p + ".py"
+        image_p = image_path(graphs_folder, project_root, module, "count_plot_fixed_size")
+        create_cat_plot_with_count(df_fixed_size, title, image_p,
+                                   x=SUITE_SIZE, y=MUTATION_SCORE, hue=METRIC,
+                                   xlabel="Test suite size", ylabel="Mutants killed (%)", no_ordering=True)
+
+        new_module_path = module_path(graphs_folder, project_root, module, plot_type)
         shutil.copy(module, new_module_path)
 
+        # fixed coverage
+        plot_type = "fixed_coverage_box_plot"
         df_fixed_coverage, total_mutants = run_mutation_experiment_fixed_coverage(
             project_root,
             module,
@@ -61,12 +72,19 @@ if __name__ == "__main__":
             max_trace_size,
             args.timeout
         )
-        title = f"{Path(module).name}, {total_mutants} mutants"
-        image_p = image_path(graphs_folder, project_root, module, "fixed_coverage")
+        df_p = df_path(graphs_folder, project_root, module, plot_type)
+        df_fixed_coverage.to_csv(df_p)
 
+        title = f"{Path(module).name}, {total_mutants} mutants"
+        image_p = image_path(graphs_folder, project_root, module, plot_type)
         create_box_plot(df_fixed_coverage, title, image_p,
                         x=SUITE_COVERAGE_BIN, y=MUTATION_SCORE, hue=METRIC,
                         xlabel="Test suite coverage", ylabel="Mutants killed (%)")
+
+        image_p = image_path(graphs_folder, project_root, module, "count_plot_fixed_coverage")
+        create_cat_plot_with_count(df_fixed_coverage, title, image_p,
+                                   x=SUITE_COVERAGE_BIN, y=MUTATION_SCORE, hue=METRIC,
+                                   xlabel="Test suite coverage", ylabel="Mutants killed (%)")
 
 
     module = args.module

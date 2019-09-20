@@ -6,10 +6,10 @@ import argparse
 
 from pathlib import Path
 
-from experiment.core.generic_experiment import image_path
+from experiment.core.generic_experiment import image_path, df_path, module_path
 from experiment.core.real_bugs_experiment import run_real_bugs_experiment_fixed_size, \
     run_real_bugs_experiment_fixed_coverage, SUITE_SIZE, METRIC, BUG_REVEALED_SCORE, SUITE_COVERAGE_BIN
-from experiment.core.visualization import create_box_plot
+from experiment.core.visualization import create_box_plot, create_cat_plot, create_cat_plot_with_count
 from tracing.trace_reader import TraceReader
 from util.misc import maybe_expand
 
@@ -62,13 +62,30 @@ if __name__ == "__main__":
             evaluation_points,
             max_trace_size
         )
-        title = f"{Path(module).name}, {total_bugs} bugs"
-        image_p = image_path(graphs_folder, project_root, module, "fixed_size")
 
+        plot_type = "fixed_size_box_plot"
+        title = f"{Path(module).name}, {total_bugs} bugs"
+
+        image_p = image_path(graphs_folder, project_root, module, plot_type)
         create_box_plot(df_fixed_size, title, image_p,
                         x=SUITE_SIZE, y=BUG_REVEALED_SCORE, hue=METRIC,
                         xlabel="Test suite size", ylabel="Bugs revealed")
-        new_module_path = image_p + ".py"
+        df_p = df_path(graphs_folder, project_root, module, plot_type)
+        df_fixed_size.to_csv(df_p)
+
+        plot_type = "fixed_size_cat_plot"
+        image_p = image_path(graphs_folder, project_root, module, plot_type)
+        create_cat_plot(df_fixed_size, title, image_p,
+                        x=SUITE_SIZE, y=BUG_REVEALED_SCORE, hue=METRIC,
+                        xlabel="Test suite size", ylabel="Bugs revealed")
+
+        plot_type = "fixed_size_count_plot"
+        image_p = image_path(graphs_folder, project_root, module, plot_type)
+        create_cat_plot_with_count(df_fixed_size, title, image_p,
+                                   x=SUITE_SIZE, y=BUG_REVEALED_SCORE, hue=METRIC,
+                                   xlabel="Test suite size", ylabel="Bugs revealed", no_ordering=True)
+
+        new_module_path = module_path(graphs_folder, project_root, module, plot_type)
         shutil.copy(module, new_module_path)
 
         df_fixed_coverage, total_bugs = run_real_bugs_experiment_fixed_coverage(
@@ -78,17 +95,33 @@ if __name__ == "__main__":
             evaluation_points,
             max_trace_size
         )
-        title = f"{Path(module).name}, {total_bugs} bugs"
-        image_p = image_path(graphs_folder, project_root, module, "fixed_coverage")
+        plot_type = "fixed_coverage_box_plot"
 
+        df_p = df_path(graphs_folder, project_root, module, plot_type)
+        df_fixed_coverage.to_csv(df_p)
+
+        image_p = image_path(graphs_folder, project_root, module, plot_type)
+        title = f"{Path(module).name}, {total_bugs} bugs"
         create_box_plot(df_fixed_coverage, title, image_p,
                         x=SUITE_COVERAGE_BIN, y=BUG_REVEALED_SCORE, hue=METRIC,
                         xlabel="Test suite coverage (%)", ylabel="Bugs revealed")
 
+        plot_type = "fixed_coverage_cat_plot"
+        image_p = image_path(graphs_folder, project_root, module, plot_type)
+        create_cat_plot(df_fixed_coverage, title, image_p,
+                        x=SUITE_COVERAGE_BIN, y=BUG_REVEALED_SCORE, hue=METRIC,
+                        xlabel="Test suite coverage (%)", ylabel="Bugs revealed")
+
+        plot_type = "fixed_coverage_count_plot"
+        image_p = image_path(graphs_folder, project_root, module, plot_type)
+        create_cat_plot_with_count(df_fixed_coverage, title, image_p,
+                                   x=SUITE_COVERAGE_BIN, y=BUG_REVEALED_SCORE, hue=METRIC,
+                                   xlabel="Test suite coverage (%)", ylabel="Bugs revealed")
+
 
     module = args.module
+    node_ids = args.node_ids
     if not module:
-        node_ids = args.node_ids
         selected_modules = trace_reader.get_modules_covered_by_nodes(node_ids)
         for module in selected_modules:
             experiment(module)
