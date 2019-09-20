@@ -9,7 +9,6 @@ import pytest
 from coverage_metrics.branch_coverage import BranchCoverage
 from coverage_metrics.def_use_coverage import DefUsePairsCoverage
 from coverage_metrics.statement_coverage import StatementCoverage
-from test.test_tracer import create_new_temp_dir
 from tracing.tracer import Tracer
 
 
@@ -67,7 +66,6 @@ def run_tests(project_root, trace_root,
 
     current_working_dir = os.getcwd()
     os.chdir(project_root)
-    print(pytest_params)
     def run():
         return pytest.main(
             node_ids + pytest_params,
@@ -92,10 +90,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Dataflow coverage tool')
     parser.add_argument('-t', action="store_true", help="Trace only, don't analyse")
-    parser.add_argument('-silence_all', action="store_true", help="Hard silence pytest")
-    # parser.add_argument('-silence_all', action="store_true", help="Hard silence pytest")
-    # parser.add_argument('-silence_all', action="store_true", help="Hard silence pytest")
-    parser.add_argument('-trace_dir', type=str, help='Folder for trace files to saved in')
+    parser.add_argument('--silence_all', action="store_true", help="Hard silence pytest")
+    parser.add_argument('--trace_dir', type=str, help='Folder for trace files to saved in')
     parser.add_argument('--pytest_args', type=str, help='Arguments to pass to pytest')
     args, unknown = parser.parse_known_args()
 
