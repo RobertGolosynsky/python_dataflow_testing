@@ -87,11 +87,12 @@ class StatementCoverage(Coverage):
         covered_lines = {}
         node_ids, paths = self.trace_reader.get_traces_for(module_path=module_path,
                                                            selected_node_ids=selected_node_ids)
+        total_items = self.total_items_of(module_path)
         for node_id, trace_file_path in zip(node_ids, paths):
             df, size = read_df(trace_file_path, max_size_mb=self.max_trace_size)
             if df is not None:
                 lines = df.T[LINE_INDEX]
-                covered_lines[node_id] = set(lines)
+                covered_lines[node_id] = set(lines).intersection(total_items)
             else:
                 covered_lines[node_id] = set()
         return covered_lines
