@@ -1,6 +1,6 @@
 import os
-import traceback
 import json
+import traceback
 from pathlib import Path
 from pprint import pformat
 from time import time
@@ -12,13 +12,14 @@ from coverage_metrics.branch_coverage import BranchCoverage
 from coverage_metrics.coverage_metric_enum import CoverageMetric
 from coverage_metrics.def_use_coverage import DefUsePairsCoverage
 from coverage_metrics.statement_coverage import StatementCoverage
-from experiment.dataset_real_bugs_experiment import RepoStatistics, node_ids_where_assertion_error
+from experiment.dataset_experiments.dataset_real_bugs_experiment import node_ids_where_assertion_error
+from experiment.dataset_experiments.repo_statistics import RepoStatistics
+
 from experiment.db_model.repo import DATABASE_PROXY, Repo, tables, Module, TestCase
 from experiment.mutation import get_mutants_of
 from experiment.pydefects.get_projects import get_projects_bugs
 from model.cfg.project_cfg import ProjectCFG
 from model.project import Project, Merger
-import real_bugs_experiment_cli
 from pytest_failed_node_ids import EXCEPTIONS_FILE
 import thorough
 from tracing.trace_reader import TraceReader
@@ -41,12 +42,12 @@ if __name__ == "__main__":
 
     repo_managers = get_projects_bugs(
         "pydefects.db",
-        limit=None,
-        time_less_then=60,
-        coverage_greater_then=60,
-        passed_greater_than=15,
-        unique_repos=False,
-        no_errors=False
+        # limit=None,
+        # time_less_then=60,
+        # coverage_greater_then=60,
+        # passed_greater_than=15,
+        # unique_repos=False,
+        # no_errors=False
     )
     max_trace_size = 10  # MB
     results_root = Path(__file__).parent.parent.parent / "1experiments_results"
@@ -58,25 +59,26 @@ if __name__ == "__main__":
     logger.warning("Loading bad repos: {rs}", rs=repo_stat.bad_repos)
     logger.warning("Loading good repos: {rs}", rs=repo_stat.good_repos)
     logger.warning("Total repos in database with this query: {c}", c=len(repo_managers))
-
+    halting_projects = ["nnweaver", "pyflightdata","audio-clip-extractor"]
     for manager in repo_managers:
-        repo_and_commit = manager.name + "@" + manager.commit.hash
+        repo_and_commit = manager.repo_name + "@" + manager.commit_hash
         logger.info(manager)
         try:
             repo = Repo.get_by_id(repo_and_commit)
+            continue
         except Exception as e:
-            logger.warning(e)
-            repo = Repo.create(id=repo_and_commit, status="bad", name=manager.name, url=manager.url(),
-                               fixed_commit=manager.commit.hash, buggy_commit="")
-        if repo_stat.is_repo_bad(manager):
-            logger.warning("Repo {n} version {c} is bad excluded", n=manager.name, c=manager.commit.hash)
-            continue
-        if not repo_stat.is_repo_good(manager):
-            logger.warning("Repo {n} version {c} is not good, we exclude it to try only good repos", n=manager.name,
-                           c=manager.commit.hash)
-
-            continue
-        if manager.name == "pyflightdata":
+            repo = Repo.create(id=repo_and_commit, status="bad", name=manager.repo_name, url=manager.url,
+                               fixed_commit=manager.commit_hash, buggy_commit="")
+            logger.warning("Processing {n}", n=repo_and_commit)
+        # if repo_stat.is_repo_bad(manager):
+        #     logger.warning("Repo {n} version {c} is bad excluded", n=manager.name, c=manager.commit_hash)
+        #     continue
+        # if not repo_stat.is_repo_good(manager):
+        #     logger.warning("Repo {n} version {c} is not good, we exclude it to try only good repos", n=manager.name,
+        #                    c=manager.commit_hash)
+        #
+        #     continue
+        if manager.repo_name in halting_projects:
             continue
 
         try:
@@ -195,5 +197,5 @@ if __name__ == "__main__":
                 repo_stat.mark_repo_as_bad(manager)
 
         except Exception as e:
-            logger.exception("What?!")
-            # print(traceback.format_exc())
+            # logger.exception("What?!")
+            print(traceback.format_exc())

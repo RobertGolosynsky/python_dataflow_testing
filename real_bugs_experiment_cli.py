@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     project_root = maybe_expand("")
     trace_root = project_root
-    evaluation_points = args.test_suite_sizes_count
+    test_suite_sizes_count = args.test_suite_sizes_count
     coverage_boundaries_count = args.test_suite_coverages_count
     max_trace_size = args.max_trace_size
     graphs_folder = maybe_expand(args.graphs_folder)
@@ -59,7 +59,7 @@ if __name__ == "__main__":
             project_root,
             module,
             node_ids,
-            evaluation_points,
+            test_suite_sizes_count,
             max_trace_size
         )
 
@@ -85,14 +85,14 @@ if __name__ == "__main__":
                                    x=SUITE_SIZE, y=BUG_REVEALED_SCORE, hue=METRIC,
                                    xlabel="Test suite size", ylabel="Bugs revealed", no_ordering=True)
 
-        new_module_path = module_path(graphs_folder, project_root, module, plot_type)
+        new_module_path = module_path(graphs_folder, project_root, module)
         shutil.copy(module, new_module_path)
 
         df_fixed_coverage, total_bugs = run_real_bugs_experiment_fixed_coverage(
             project_root,
             module,
             node_ids,
-            evaluation_points,
+            coverage_boundaries_count,
             max_trace_size
         )
         plot_type = "fixed_coverage_box_plot"

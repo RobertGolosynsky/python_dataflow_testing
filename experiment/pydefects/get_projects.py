@@ -13,17 +13,19 @@ from experiment.pydefects.database.models import DATABASE_PROXY, Repository, Tes
 
 
 class RepositoryManager:
-    def __init__(self, repo: Repository, commit: Commit, test_module_path: str = None):
-        self.repo = repo
-        self.commit = commit
-        self.name = Path(self.url()).name
+
+    @staticmethod
+    def create_from(repo: Repository, commit: Commit, test_module_path: str = None):
+        return RepositoryManager(repo.homepage, commit.hash, test_module_path)
+
+    def __init__(self, url: str, commit_hash: str, test_module_path: str = None):
+        self.url = url
+        self.commit_hash = commit_hash
+        self.repo_name = Path(url).name
         self.test_module_path = test_module_path
 
-    def url(self):
-        return self.repo.homepage
-
     def path_to_repo(self, folder_path):
-        return os.path.join(folder_path, f"{self.repo.name}_{self.commit.hash}")
+        return os.path.join(folder_path, f"{self.repo_name}_{self.commit_hash}")
 
     def clone_to(self, path, overwrite_if_exists=False):
         checkout_path = self.path_to_repo(path)
@@ -31,46 +33,46 @@ class RepositoryManager:
             logger.info("Repo was already cloned, using previous version")
             return checkout_path
         shutil.rmtree(checkout_path, ignore_errors=True)
-        logger.info("Cloning from {url}:{commit}", url=self.repo.homepage, commit=self.commit.hash)
-        r = requests.get(self.repo.homepage)
+        logger.info("Cloning from {url}:{commit}", url=self.url, commit=self.commit_hash)
+        r = requests.get(self.url)
         if r.status_code == 404:
             raise IOError("Git repo not found")
-        git_repo = Repo.clone_from(self.repo.homepage, checkout_path)
-        git_repo.git.checkout(self.commit.hash)
+        git_repo = Repo.clone_from(self.url, checkout_path)
+        git_repo.git.checkout(self.commit_hash)
         return checkout_path
 
     def clone_parent_to(self, path, overwrite_if_exists=False):
         parent_path = os.path.join(
             path,
-            f"{self.repo.name}_{self.commit.hash}_parent"
+            f"{self.repo_name}_{self.commit_hash}_parent"
         )
         if not overwrite_if_exists and Path(parent_path).is_dir():
             logger.info("Repo was already cloned, using previous version")
             return parent_path
         shutil.rmtree(parent_path, ignore_errors=True)
-        logger.info("Cloning from {url}:{commit}", url=self.repo.homepage, commit=self.commit.hash)
-        r = requests.get(self.repo.homepage)
+        logger.info("Cloning from {url}:{commit}", url=self.url, commit=self.commit_hash)
+        r = requests.get(self.url)
         if r.status_code == 404:
             raise IOError("Git repo not found")
-        git_repo = Repo.clone_from(self.repo.homepage, parent_path)
-        parent = git_repo.commit(self.commit.hash)
+        git_repo = Repo.clone_from(self.url, parent_path)
+        parent = git_repo.commit(self.commit_hash)
         git_repo.git.checkout(parent.parents[0])
         return parent_path, parent.parents[0]
 
     def __repr__(self):
         return f"""
-        Repo:       {self.name} @ {self.commit.hash}
-        Failed:     {self.repo.testresults.failed}
-        Passed:     {self.repo.testresults.passed}
-        Skipped:    {self.repo.testresults.skipped}
-        Warnings:   {self.repo.testresults.warnings}
-        Errors:     {self.repo.testresults.error}
-        Time:       {self.repo.testresults.time}s
-        Statements: {self.repo.testresults.statements}
-        Missing:    {self.repo.testresults.missing}
-        Coverage:   {self.repo.testresults.coverage}%
+        Repo:       {self.repo_name} @ {self.commit_hash}
         Test module path:   {self.test_module_path}
 """
+        # Failed:     {self.repo.testresults.failed}
+        # Passed:     {self.repo.testresults.passed}
+        # Skipped:    {self.repo.testresults.skipped}
+        # Warnings:   {self.repo.testresults.warnings}
+        # Errors:     {self.repo.testresults.error}
+        # Time:       {self.repo.testresults.time}s
+        # Statements: {self.repo.testresults.statements}
+        # Missing:    {self.repo.testresults.missing}
+        # Coverage:   {self.repo.testresults.coverage}%
 
 
 def get_projects(
@@ -234,23 +236,23 @@ def get_projects_bugs(
                 & ~(Diff.new_path.contains("test"))
             ).get()
         )
-        repos.append(RepositoryManager(repo, commit, test_module_path=module_name.new_path))
+        repos.append(RepositoryManager.create_from(repo, commit, test_module_path=module_name.new_path))
 
-    filtered = []
-    used_repos = set()
-    for repo_version in repos:
-        tr: TestResults = repo_version.repo.testresults
-        if time_less_then and tr.time > time_less_then:
-            continue
-        if no_errors and tr.error > 0:
-            continue
-        if coverage_greater_then and tr.coverage < coverage_greater_then:
-            continue
-        if passed_greater_than and tr.passed < passed_greater_than:
-            continue
-        if unique_repos and repo_version.repo.id in used_repos:
-            continue
-        used_repos.add(repo_version.repo.id)
-        filtered.append(repo_version)
+    # filtered = []
+    # used_repos = set()
+    # for repo_version in repos:
+    #     tr: TestResults = repo_version.repo.testresults
+    #     if time_less_then and tr.time > time_less_then:
+    #         continue
+    #     if no_errors and tr.error > 0:
+    #         continue
+    #     if coverage_greater_then and tr.coverage < coverage_greater_then:
+    #         continue
+    #     if passed_greater_than and tr.passed < passed_greater_than:
+    #         continue
+    #     if unique_repos and repo_version.repo.id in used_repos:
+    #         continue
+    #     used_repos.add(repo_version.repo.id)
+    #     filtered.append(repo_version)
 
-    return filtered
+    return repos

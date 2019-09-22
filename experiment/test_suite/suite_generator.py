@@ -7,7 +7,7 @@ from coverage_metrics.branch_coverage import BranchCoverage
 from coverage_metrics.coverage_metric_enum import CoverageMetric
 from coverage_metrics.def_use_coverage import DefUsePairsCoverage
 from coverage_metrics.statement_coverage import StatementCoverage
-from experiment.collect_test_suite import SubTestSuite, generate_test_suites_fixed_size, \
+from experiment.test_suite.collect_test_suite import SubTestSuite, generate_test_suites_fixed_size, \
     generate_test_suites_fixed_coverage
 
 
@@ -36,7 +36,8 @@ class SuiteGenerator:
             cov = self.brcov
         else:
             cov = self.ducov
-
+        if not isinstance(test_cases, frozenset):
+            test_cases = frozenset(test_cases)
         return self.cached_get_total_items(cov, coverage_metric, module_under_test_path, test_cases)
         # return _get_total_items(cov, coverage_metric, module_under_test_path, test_cases)
 
@@ -45,11 +46,13 @@ class SuiteGenerator:
                          coverage_metric: CoverageMetric,
                          n,
                          exact_size,
-                         check_unique_items_covered=True,
+                         check_unique_items_covered=False,
                          test_cases=None
                          ) -> List[SubTestSuite]:
 
         coverage_report, total_items = self._get_total_items(coverage_metric, module_under_test_path, test_cases)
+        if len(total_items) == 0:
+            return []
         suites = generate_test_suites_fixed_size(
             data=coverage_report,
             n=n,
@@ -64,7 +67,7 @@ class SuiteGenerator:
                             coverage_metric: CoverageMetric,
                             n,
                             coverage_boundary,
-                            check_unique_items_covered=True,
+                            check_unique_items_covered=False,
                             test_cases=None
                             ) -> List[SubTestSuite]:
         coverage_report, total_items = self._get_total_items(coverage_metric, module_under_test_path, test_cases)

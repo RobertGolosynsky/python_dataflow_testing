@@ -2,7 +2,7 @@ import traceback
 from pathlib import Path
 from loguru import logger
 
-from experiment.dataset_real_bugs_experiment import RepoStatistics
+from experiment.dataset_experiments.dataset_real_bugs_experiment import RepoStatistics
 from experiment.pydefects.get_projects import get_projects
 from model.project import Project
 import mutation_experiment_cli

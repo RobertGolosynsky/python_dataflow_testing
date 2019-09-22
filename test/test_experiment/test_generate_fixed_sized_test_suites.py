@@ -1,17 +1,12 @@
-import sys
 import unittest
-from pprint import pprint
-from time import time
 
-import numpy
 import pandas as pd
 
 import thorough
 from coverage_metrics.coverage_metric_enum import CoverageMetric
-from coverage_metrics.def_use_coverage import DefUsePairsCoverage
-from experiment.suite_generator import SuiteGenerator
+from experiment.test_suite.suite_generator import SuiteGenerator
 
-from test.test_tracer import CLEAN_LINKED_LIST_ROOT, PROJECT_ROOT, create_new_temp_dir
+from test.test_tracer import PROJECT_ROOT, create_new_temp_dir
 
 
 class TestCreateTestSuites(unittest.TestCase):
@@ -33,7 +28,7 @@ class TestCreateTestSuites(unittest.TestCase):
             module_under_test_path=module_under_test_path,
             coverage_metric=CoverageMetric.BRANCH,
             exact_size=3,
-            check_unique_items_covered=True,
+            check_unique_items_covered=False,
             n=10
         )
         self.assertTrue(len(suites) > 0)

@@ -60,9 +60,42 @@ def create_cat_plot_with_count(df, title, filename,
     plt.title(title)
     # plt.xlabel(xlabel)
     # plt.ylabel(ylabel)
-    # plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     #
     # plt.tight_layout()
 
     fig.savefig(filename)
     plt.close()
+
+
+def a():
+
+
+    def create_combined_plot(df_bugs, df_mutation,
+                             title, filename,
+                             countx,
+                             x1, y1,
+                             x2, y2,
+                             x3, y3,
+                             hue,
+                             xlabel, ylabel,
+                             ordering_function
+                             ):
+        fig, ax = plt.subplots(4, sharex=True, figsize=(16, 8))
+
+        def key(a_bin):
+            return int(a_bin[1:-1].split("-")[0])
+        order_bugs = list(sorted(df_bugs[x].unique(), key=ordering_function))
+        order_bugs = list(sorted(df_bugs[x].unique(), key=ordering_function))
+
+        sns.catplot(x=x, y=y, hue=hue, data=df_bugs, palette="husl", capsize=.2, kind="point", dodge=True,
+                    order=order_bugs, ax=ax[0])
+        sns.catplot(x=x2, y=y2, hue=hue, data=df_mutation, palette="husl", capsize=.2, kind="point", dodge=True,
+                    order=order_bugs, ax=ax[1])
+        sns.catplot(x=x1, y=y1, hue=hue, data=df_bugs, palette="husl", capsize=.2, kind="point", dodge=True,
+                    order=order_bugs, ax=ax[2])
+        sns.countplot(x=countx, hue=hue, data=df_bugs, palette="husl", dodge=True,
+                      order=order_bugs, ax=ax[3])
+
+        plt.title(title)
+        fig.savefig(filename)
+        plt.close()

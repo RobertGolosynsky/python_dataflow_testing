@@ -33,7 +33,7 @@ def generate_test_suites_fixed_size(data,
                                     n,
                                     total_coverage_items: set,
                                     exact_size,
-                                    check_unique_items_covered=True,
+                                    check_unique_items_covered=False,
                                     consecutive_failures_allowed=100
                                     ) -> List[SubTestSuite]:
     if len(total_coverage_items) == 0:
@@ -80,7 +80,7 @@ def generate_test_suites_fixed_coverage(data,
                                         n,
                                         total_coverage_items: set,
                                         coverage_boundary,
-                                        check_unique_items_covered=True,
+                                        check_unique_items_covered=False,
                                         consecutive_failures_allowed=20
                                         ) -> List[SubTestSuite]:
     total_coverage_items_count = len(total_coverage_items)

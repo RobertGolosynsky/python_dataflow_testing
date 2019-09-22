@@ -4,11 +4,9 @@ import json
 from pathlib import Path
 from pprint import pformat
 
-import pandas as pd
 from loguru import logger
-from pandas.errors import EmptyDataError
 
-from experiment.pydefects.get_projects import get_projects, get_projects_bugs, RepositoryManager
+from experiment.pydefects.get_projects import get_projects_bugs
 from model.project import Project, Merger
 import real_bugs_experiment_cli
 from pytest_failed_node_ids import EXCEPTIONS_FILE
@@ -22,70 +20,6 @@ def node_ids_where_assertion_error(js):
         if "AssertionError" in js[node_id]:
             ids.append(node_id)
     return ids
-
-
-class RepoStatistics:
-
-    def __init__(self, path):
-        self.path = path
-        os.makedirs(path, exist_ok=True)
-
-        good_path = os.path.join(path, "good_repos.csv")
-        bad_path = os.path.join(path, "bad_repos.csv")
-        suspicious_path = os.path.join(path, "suspicious_repos.csv")
-        self.bad_repos = self._read_repos(bad_path)
-        self.good_repos = self._read_repos(good_path)
-        self.suspicious_repos = self._read_repos(suspicious_path)
-
-        self.good_file = open(good_path, "a")
-        self.bad_file = open(bad_path, "a")
-        self.suspicious_file = open(suspicious_path, "a")
-
-    def mark_repo_as_bad(self, repo: RepositoryManager):
-        self.bad_file.write(f"{repo.name},{repo.commit.hash}\n")
-        self.bad_file.flush()
-
-    def mark_repo_as_good(self, repo: RepositoryManager):
-        self.good_file.write(f"{repo.name},{repo.commit.hash}\n")
-        self.good_file.flush()
-
-    def mark_repo_as_suspicious(self, repo: RepositoryManager):
-        self.suspicious_file.write(f"{repo.name},{repo.commit.hash}\n")
-        self.suspicious_file.flush()
-
-    def is_repo_bad(self, repo_manager: RepositoryManager):
-        for name, commit in self.bad_repos:
-            if name == repo_manager.name and commit == repo_manager.commit.hash:
-                return True
-        return False
-
-    def is_repo_good(self, repo_manager: RepositoryManager):
-        for name, commit in self.good_repos:
-            if name == repo_manager.name and commit == repo_manager.commit.hash:
-                return True
-        return False
-
-    def is_repo_suspicious(self, repo_manager: RepositoryManager):
-        for name, commit in self.suspicious_repos:
-            if name == repo_manager.name and commit == repo_manager.commit.hash:
-                return True
-        return False
-
-    def _read_repos(self, path):
-        try:
-            repos_name_commit = pd.read_csv(
-                path,
-                header=None,
-                delimiter=",",
-                dtype=str
-            ).values
-        except EmptyDataError as e:
-            logger.warning("File {f} is empty", f=path)
-            return []
-        except FileNotFoundError as e:
-            logger.warning("File {f} does not exist", f=path)
-            return []
-        return repos_name_commit
 
 
 if __name__ == "__main__":
@@ -114,10 +48,13 @@ if __name__ == "__main__":
         if repo_stat.is_repo_bad(manager):
             logger.warning("Repo {n} version {c} is excluded", n=manager.name, c=manager.commit.hash)
             continue
-        if repo_stat.is_repo_good(manager):
+        if not repo_stat.is_repo_good(manager):
             logger.warning("Repo {n} version {c} is good, but we exclude it to try others", n=manager.name,
                            c=manager.commit.hash)
             continue
+        if manager.name == "pyflightdata":
+            continue
+
         try:
 
             fixed_root = manager.clone_to(dataset_path, overwrite_if_exists=False)

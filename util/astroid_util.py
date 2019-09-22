@@ -117,6 +117,7 @@ def _clean_function_node(func: ast.FunctionDef):
     func.decorator_list = []
     func.returns = None
     func.args.defaults = []
+    func.args.kw_defaults = []
     for arg in func.args.args:
         arg.annotation = None
     if func.args.vararg:

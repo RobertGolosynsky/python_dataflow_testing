@@ -8,13 +8,13 @@ from loguru import logger
 
 from config import COMMON_EXCLUDE
 from coverage_metrics.coverage_metric_enum import CoverageMetric
-from experiment.collect_test_suite import random_suites
-from experiment.suite_generator import SuiteGenerator
+from experiment.test_suite.collect_test_suite import random_suites
+from experiment.test_suite.suite_generator import SuiteGenerator
 from model.cfg.project_cfg import ProjectCFG
 from tracing.trace_reader import TraceReader
 
 RANDOM_STRATEGY = 1337
-default_metrics = (
+DEFAULT_METRICS = (
     # CoverageMetric.STATEMENT,
     CoverageMetric.BRANCH,
     # CoverageMetric.M_ONLY,
@@ -41,31 +41,33 @@ metric_names = {
 def generic_experiment_size(
         project_root, module_under_test_path,
         scoring_function,
-        evaluation_points=30,
+        test_suite_sizes_count=30,
+        test_suite_sizes=None,
         max_trace_size=10,
-        coverage_metrics=None
+        coverage_metrics=None,
+        node_ids=None,
+        support=100
 ):
     logger.debug("Running mutation experiment for {module}", module=module_under_test_path)
 
     if coverage_metrics is None:
-        coverage_metrics = default_metrics
+        coverage_metrics = DEFAULT_METRICS
     cfg = ProjectCFG.create_from_path(project_root, exclude_folders=COMMON_EXCLUDE)
-
-    trace_reader = TraceReader(project_root)
-    node_ids, paths = trace_reader.get_traces_for(module_under_test_path)
+    if node_ids is None:
+        trace_reader = TraceReader(project_root)
+        node_ids, paths = trace_reader.get_traces_for(module_under_test_path)
     total_cases = len(node_ids)
-    support = 100
+    if test_suite_sizes is None:
+        if total_cases < test_suite_sizes_count:
+            test_suite_sizes_count = total_cases
+        test_suite_sizes = np.arange(test_suite_sizes_count) + 1
+        test_suite_sizes = [int(c * total_cases / test_suite_sizes_count) for c in test_suite_sizes]
 
-    if total_cases < evaluation_points:
-        evaluation_points = total_cases
-    sub_test_suites_sizes = np.arange(evaluation_points) + 1
-    sub_test_suites_sizes = [int(c * total_cases / evaluation_points) for c in sub_test_suites_sizes]
-
-    logger.debug("Testing test suites of sizes {ss}", ss=sub_test_suites_sizes)
+    logger.debug("Testing test suites of sizes {ss}", ss=test_suite_sizes)
     generator = SuiteGenerator(project_root, project_root, COMMON_EXCLUDE, max_trace_size=max_trace_size)
     points = []
 
-    for sub_test_suites_size in sub_test_suites_sizes:
+    for sub_test_suites_size in test_suite_sizes:
         for coverage_metric in coverage_metrics:
             logger.debug("Test suite size: {sub_test_suites_size}, metric: {coverage_metric}",
                          sub_test_suites_size=sub_test_suites_size,
@@ -78,7 +80,8 @@ def generic_experiment_size(
                     coverage_metric=coverage_metric,
                     exact_size=sub_test_suites_size,
                     n=support,
-                    check_unique_items_covered=True,
+                    check_unique_items_covered=False,
+                    test_cases=node_ids
                 )
 
             for suite in suites:
@@ -94,14 +97,15 @@ def generic_experiment_coverage(
         scoring_function,
         coverage_boundaries_count=20,
         max_trace_size=10,
-        coverage_metrics=None
+        coverage_metrics=None,
+        node_ids=None,
+        support=100
 ):
     cfg = ProjectCFG.create_from_path(project_root, exclude_folders=COMMON_EXCLUDE)
 
     if coverage_metrics is None:
-        coverage_metrics = default_metrics
+        coverage_metrics = DEFAULT_METRICS
 
-    support = 100
     coverage_boundaries = np.linspace(0.05, 1.0, num=coverage_boundaries_count)
 
     generator = SuiteGenerator(project_root, project_root, COMMON_EXCLUDE, max_trace_size=max_trace_size)
@@ -116,7 +120,8 @@ def generic_experiment_coverage(
                 coverage_metric=metric,
                 coverage_boundary=boundary,
                 n=support,
-                check_unique_items_covered=True,
+                check_unique_items_covered=False,
+                test_cases=node_ids
             )
 
             for suite in suites:
@@ -197,11 +202,11 @@ def df_path(graphs_path, project_root, module_path, mark):
     return image_p
 
 
-def module_path(graphs_path, project_root, module_path, mark):
+def module_path(graphs_path, project_root, module_path):
     pname = Path(project_root).name
     rel_p = str(Path(module_path).relative_to(project_root))
 
-    file_name = pname + "@" + rel_p.replace("/", "::") + "::" + mark + ".py"
+    file_name = pname + "@" + rel_p.replace("/", "::")
 
     image_p = os.path.join(graphs_path, file_name)
     os.makedirs(graphs_path, exist_ok=True)
