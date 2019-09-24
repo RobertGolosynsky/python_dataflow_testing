@@ -39,7 +39,7 @@ if __name__ == "__main__":
                         help='Suite sizes to test (priority over "test_suite_coverages_count")')
     parser.add_argument('--test_suite_coverages_count', type=int, help='How many bins for coverage to use')
     parser.add_argument('--support', type=int, help='How many test suites to generate for each ts size of coverage bin',
-                        default=100)
+                        default=1000)
     parser.add_argument('--max_trace_size', type=int, help='Largest trace file to open (MB)', default=10)
 
     args, unknown = parser.parse_known_args()
@@ -66,14 +66,15 @@ if __name__ == "__main__":
         deselect_tests=None
     )
 
-    new_module_path = module_path(out_folder, project_root, module)
-    shutil.copy(module, new_module_path)
 
     trace_reader = TraceReader(trace_root)
     failed_node_ids = trace_reader.read_failed_test_cases()
 
     module = maybe_expand(module)
     coverage_metrics = (CoverageMetric.STATEMENT, CoverageMetric.BRANCH, CoverageMetric.ALL_PAIRS)
+
+    new_module_path = module_path(out_folder, project_root, module)
+    shutil.copy(module, new_module_path)
 
     df_fixed_size, total_bugs = run_real_bugs_experiment_fixed_size(
         project_root=project_root,

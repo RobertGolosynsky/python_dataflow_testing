@@ -101,4 +101,6 @@ def get_scoring_function(revealing_node_ids):
 
 def bugs_revealed(suite: SubTestSuite, revealing_node_ids: Set[str]):
     used_reveling_node_ids = revealing_node_ids.intersection(set(suite.test_cases))
-    return len(used_reveling_node_ids)
+    if len(revealing_node_ids) == 0:
+        return 0.0
+    return len(used_reveling_node_ids)/len(revealing_node_ids)

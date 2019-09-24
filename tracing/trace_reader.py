@@ -90,7 +90,7 @@ class TraceReader:
 
 
 def read_df(f, cut=-1, max_size_mb=None):
-    logger.debug("Reading trace {f}", f=f)
+    # logger.debug("Reading trace {f}", f=f)
     file_size = os.stat(f).st_size // (1024 * 1024)
     if max_size_mb and file_size > max_size_mb:
         return None, file_size

@@ -25,8 +25,9 @@ class SuiteGenerator:
         self.ducov = DefUsePairsCoverage(trace_root, project_root,
                                          exclude_folders=exclude_folders,
                                          max_trace_size=max_trace_size)
-
-        self.memory = Memory(location=Path(trace_root) / ".coverage_cache", verbose=0)
+        cache_path = "/tmp/thorough/.cached_coverage"
+        # self.memory = Memory(location=Path(trace_root) / ".coverage_cache", verbose=0)
+        self.memory = Memory(location=cache_path, verbose=0)
         self.cached_get_total_items = self.memory.cache(_get_total_items, ignore=["cov"])
 
     def _get_total_items(self, coverage_metric, module_under_test_path, test_cases):

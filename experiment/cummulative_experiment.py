@@ -19,7 +19,7 @@ plots = "plots"
 max_trace_size = 10  # MB
 results_root = Path(__file__).parent.parent.parent / "1experiments_results"
 dataset_path = results_root / "dataset_cumulative"
-graphs_path = results_root / "graphs_cumulative"
+graphs_path = results_root / "graphs_cumulative_next_20_offset_40"
 extra_requirements = [r.strip() for r in open("../requirements.txt").readlines()]
 
 if __name__ == "__main__":
@@ -41,11 +41,12 @@ if __name__ == "__main__":
         .group_by(Repo.name) \
         .order_by(Module.total_cases.desc()) \
         .where(Repo.status == "good") \
+        .offset(40) \
         .limit(20)
 
     min_test_cases = min(ms, key=operator.attrgetter("total_cases")).total_cases
-    test_suite_sizes = np.arange(min_test_cases) + 1
-
+    test_suite_sizes = np.arange(start=1, stop=int(min_test_cases * 0.8), step=1) + 1
+    test_suite_sizes = " ".join(map(str, test_suite_sizes))
     for m in ms:
         manager = RepositoryManager(m.repo.url, m.repo.fixed_commit, m.path)
         fixed_root = manager.clone_to(dataset_path, overwrite_if_exists=False)
@@ -57,7 +58,7 @@ if __name__ == "__main__":
         logger.info(f"Buggy commit path {buggy_project.path}")
 
         fixed_project.create_venv(force_remove_previous=True)
-        buggy_project.create_venv(force_remove_previous=False)
+        buggy_project.create_venv(force_remove_previous=True)
         logger.info("Venv created")
 
         logger.info("Moving tests...")
@@ -72,8 +73,7 @@ if __name__ == "__main__":
         print("*" * 100)
         revealing_node_ids = " ".join(revealing_node_ids)
 
-        test_suite_sizes = " ".join(map(str, test_suite_sizes))
         buggy_project.run_command(
-            f"python3 {combined_experiment_cli_path} --module={module_under_test} --revealing_node_ids {revealing_node_ids} --out={graphs_path} --test_suite_sizes={test_suite_sizes} --test_suite_coverages_count=20 --max_trace_size=10 ",
+            f"python3 {combined_experiment_cli_path} --module={module_under_test} --revealing_node_ids {revealing_node_ids} --out={graphs_path} --test_suite_sizes {test_suite_sizes} --test_suite_coverages_count=20 --max_trace_size=10 ",
             extra_requirements=extra_requirements
         )

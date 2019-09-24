@@ -22,7 +22,7 @@ import random
 
 from tqdm import tqdm
 
-cache_location = Path(".cached_mutants").resolve()
+cache_location = Path("/tmp/thorough/.cached_mutants").resolve()
 memory = Memory(location=cache_location, verbose=10000)
 
 
