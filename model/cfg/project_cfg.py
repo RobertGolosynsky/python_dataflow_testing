@@ -12,6 +12,7 @@ import json
 
 
 class ProjectCFG:
+    __version__ = 1
     cfg_folder = ".flow_graph"
     tag_file = "version.hash"
     cfg_file = "project.flow"
@@ -27,7 +28,7 @@ class ProjectCFG:
             logger.debug("Project changed so we have to recreate the project cfg")
         if use_cached_if_possible and not project_changed:
             p = ProjectCFG._load(project_path)
-            if p:
+            if p and hasattr(p, "__version__") and p.__version__ == ProjectCFG.__version__:
                 logger.info("Loaded Project CFG from a save file")
             else:
                 logger.warning("Save file not found for project {pp}", pp=project_path)

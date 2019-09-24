@@ -36,13 +36,16 @@ class ModuleCFG(object):
         self.interclass_pairs = self._calculate_interclass()
 
         logger.debug("Finding branching points of the module")
+        self.branching_edges = {}
         self.branches = set()
         for cls_cfg in self.class_cfgs.values():
             for func_cfg in cls_cfg.methods.values():
-                self.branches |= func_cfg.branches
+                self.branching_edges.update(func_cfg.branching_edges)
+                self.branches.update(func_cfg.branches)
 
         for func_cfg in self.function_cfgs.values():
-            self.branches |= func_cfg.branches
+            self.branching_edges.update(func_cfg.branching_edges)
+            self.branches.update(func_cfg.branches)
 
         logger.debug("Done creating module cfg for module {m}", m=self.module_path)
 

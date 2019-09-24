@@ -14,8 +14,8 @@ class FunctionCFG:
         self.line_start = line_start
         self.line_end = line_end
         self.definitions, self.uses = self.cfg.collect_definitions_and_uses(filter_self=filter_self)
-        from coverage_metrics.branch_coverage import first_lines_of_branches
-        self.branches = first_lines_of_branches(self.cfg.g)
+        from coverage_metrics.branch_coverage import find_branches
+        self.branches, self.branching_edges = find_branches(self.cfg.g)
 
     @staticmethod
     def create(function: Function, calls=None, filter_self=True):

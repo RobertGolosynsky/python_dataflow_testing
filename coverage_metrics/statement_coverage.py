@@ -15,10 +15,10 @@ class StatementCoverage(Coverage):
     file_path_col = "Fpath"
     coverage_col = "StCov"
 
-    def __init__(self, trace_root, project_root, exclude_folders=None, max_trace_size=None):
+    def __init__(self, trace_root, project_root, exclude_folders=None, max_trace_size=None, use_cached_if_possible=True):
         self.max_trace_size = max_trace_size
         self.project_cfg = ProjectCFG.create_from_path(project_root, exclude_folders=exclude_folders,
-                                                       use_cached_if_possible=True)
+                                                       use_cached_if_possible=use_cached_if_possible)
         self.trace_root = trace_root
         self.trace_reader = TraceReader(self.trace_root)
 

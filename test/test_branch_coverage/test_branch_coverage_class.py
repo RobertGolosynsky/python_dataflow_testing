@@ -1,6 +1,6 @@
 import unittest
 
-from coverage_metrics.branch_coverage import BranchCoverage, first_lines_of_branches
+from coverage_metrics.branch_coverage import BranchCoverage
 from test.test_tracer import CLEAN_LINKED_LIST_ROOT, create_new_temp_dir
 
 import thorough
@@ -9,7 +9,6 @@ import thorough
 class TestBranchCoverageClass(unittest.TestCase):
 
     def test_branch_coverage(self):
-
         project_root = CLEAN_LINKED_LIST_ROOT
         trace_root = create_new_temp_dir()
         exclude_folders = ["venv", "dataset"]
