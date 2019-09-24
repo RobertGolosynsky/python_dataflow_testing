@@ -1,4 +1,6 @@
 import ast
+import traceback
+
 from loguru import logger
 
 
@@ -22,7 +24,7 @@ class Function:
         try:
             exec(fake_module_code, namespace)
         except Exception as e:
-            logger.error(str(e))
+            logger.error(traceback.format_exc(e))
             logger.error("Ast dump of function: {d}", d=ast.dump(function_def))
             # TODO: fix this error
         function = Function(namespace[fn_name], line, args)
@@ -49,7 +51,11 @@ def compile_module(module_path):
     logger.debug("Compiling module {p}", p=module_path)
     with open(module_path) as f:
         txt = f.read()
-        ast_functions, ast_classes, calls = parse(txt)
+    return _compile_module(txt)
+
+
+def _compile_module(source):
+    ast_functions, ast_classes, calls = parse(source)
 
     nodes = ast_functions + ast_classes
     first_lines = [n.lineno for n in nodes]
@@ -117,12 +123,20 @@ def _clean_function_node(func: ast.FunctionDef):
     func.decorator_list = []
     func.returns = None
     func.args.defaults = []
-    func.args.kw_defaults = []
-    for arg in func.args.args:
-        arg.annotation = None
-    if func.args.vararg:
-        func.args.vararg.annotation = None
+    func.args = RemoveAnnotations().visit(func.args)
+    ast.fix_missing_locations(func.args)
     return func
+
+
+class RemoveAnnotations(ast.NodeTransformer):
+
+    def visit(self, node):
+        if isinstance(node, ast.Name):
+            return ast.Name(id='str', ctx=ast.Load())
+        if hasattr(node, "annotation"):
+            node.annotation = None
+        self.generic_visit(node)
+        return node
 
 
 def resolve_function_name(node):

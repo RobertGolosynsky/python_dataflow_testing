@@ -27,3 +27,11 @@ class TestReflection(unittest.TestCase):
         self.assertIn("put", m_names)
         self.assertIn("clear", m_names)
 
+    def test_compiles(self):
+        intermediate = au._compile_module(  # ,  kwarg1=1, kwarg2="BAR", kwarg3="BAZ",**kw
+            """
+def func(p:int, a=3, *args, b=__Some, c: dict = {})->Set:
+    return __Some1 
+            """
+        )
+        self.assertIsNotNone(intermediate)
