@@ -7,7 +7,7 @@ from coverage_metrics.branch_coverage import BranchCoverage
 from coverage_metrics.coverage_metric_enum import CoverageMetric
 from coverage_metrics.def_use_coverage import DefUsePairsCoverage
 from coverage_metrics.statement_coverage import StatementCoverage
-from experiment.test_suite.collect_test_suite import SubTestSuite, generate_test_suites_fixed_size, \
+from experiment.suites.collect_test_suite import SubTestSuite, generate_test_suites_fixed_size, \
     generate_test_suites_fixed_coverage
 
 
@@ -37,7 +37,7 @@ class SuiteGenerator:
             cov = self.brcov
         else:
             cov = self.ducov
-        if not isinstance(test_cases, frozenset):
+        if test_cases is not None and not isinstance(test_cases, frozenset):
             test_cases = frozenset(test_cases)
         return self.cached_get_total_items(cov, coverage_metric, module_under_test_path, test_cases)
         # return _get_total_items(cov, coverage_metric, module_under_test_path, test_cases)

@@ -7,7 +7,7 @@ from loguru import logger
 
 from coverage_metrics.statement_coverage import StatementCoverage
 from coverage_metrics.util import percent
-from graphs.keys import LINE_KEY
+from graphs.keys import LINE_KEY, INSTRUCTION_KEY
 import pandas as pd
 
 from tracing.trace_reader import read_df
@@ -23,14 +23,52 @@ def find_branch_heads(g: nx.DiGraph, branch_node):
     branches = set()
     while len(working_list) > 0:
         cur = working_list.pop()
-        cur_line = g.nodes[cur].get(LINE_KEY)
-        if cur_line != branch_start:
-            branches.add((branch_start, cur_line))
+        instr = g.nodes[cur].get(INSTRUCTION_KEY)
+        if not instr:
+            continue
+        if instr.starts_line:
+            cur_line = g.nodes[cur].get(LINE_KEY)
+            if cur_line != branch_start:
+                branches.add((branch_start, cur_line))
+            else:
+                working_list.extend(list(g.successors(cur)))
         else:
-            working_list.extend(list(g.successors(cur)))
+            next_after_cur = list(g.successors(cur))
+            if len(next_after_cur) == 1:
+                next = next_after_cur[0]
+                instr = g.nodes[next].get(INSTRUCTION_KEY)
+                if instr and instr.starts_line:
+                    cur_line = g.nodes[next].get(LINE_KEY)
+                    if cur_line and cur_line != branch_start:
+                        branches.add((branch_start, cur_line))
 
+        # else:
+        #     cur = next_node_linear(g, cur)
+        #     if cur:
+        #         cur_line = g.nodes[cur].get(LINE_KEY)
+        #         if cur_line != branch_start:
+        #             branches.add((branch_start, cur_line))
+        #         else:
+        #             working_list.extend(list(g.successors(cur)))
     return branches
 
+def next_node_linear(g:nx.DiGraph, node):
+    line = g.nodes[node].get(LINE_KEY)
+    while True:
+        succs = list(g.successors(node))
+        if len(succs) == 1:
+            succ = succs[0]
+            cur = g.nodes[succ].get(LINE_KEY)
+            if not cur:
+                return None # reached exit node potentially
+            if cur>line:
+                return succ
+            elif cur<line:
+                return None
+            else:
+                node = succ
+        else:
+            return None
 
 def find_branches(g: nx.DiGraph) -> (dict, set):
     branching_edges = defaultdict(set)
@@ -38,9 +76,9 @@ def find_branches(g: nx.DiGraph) -> (dict, set):
     for branching_point in g.nodes():
         if g.out_degree[branching_point] > 1:
             brs = find_branch_heads(g, branching_point)
-            for branch in brs:
-                branching_edges[branching_point].add(branch)
-                countable_representation.add((branching_point, branch))
+            for fr, to in brs:
+                branching_edges[fr].add(to)
+                countable_representation.add((fr, to))
 
     return branching_edges, countable_representation
 
@@ -49,7 +87,7 @@ def find_covered_branches(lines, branching_edges) -> Set:
     covered_branches = set()
     for line, next_line in zip(lines, lines[1:]):
         if line in branching_edges:
-            if next_line in branching_edges[next_line]:
+            if next_line in branching_edges[line]:
                 covered_branches.add((line, next_line))
 
     return covered_branches

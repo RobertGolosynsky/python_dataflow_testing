@@ -14,17 +14,9 @@ from experiment.core.mutation_experiment import run_mutation_experiment_fixed_si
 from experiment.core.real_bugs_experiment import run_real_bugs_experiment_fixed_size, \
     run_real_bugs_experiment_fixed_coverage, SUITE_SIZE, METRIC, BUG_REVEALED_SCORE, SUITE_COVERAGE_BIN
 from experiment.core.visualization import create_cat_plot_with_count
+from experiment.dataframe_type import DataFrameType
 from tracing.trace_reader import TraceReader
 from util.misc import maybe_expand
-from enum import Enum
-
-
-class DataFrameType(Enum):
-    MUTATION_FIXED_SIZE = "MUTATION_FIXED_SIZE"
-    MUTATION_FIXED_COVERAGE = "MUTATION_FIXED_COVERAGE"
-    BUGS_FIXED_SIZE = "BUGS_FIXED_SIZE"
-    BUGS_FIXED_COVERAGE = "BUGS_FIXED_COVERAGE"
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Real project experiment')
@@ -39,7 +31,7 @@ if __name__ == "__main__":
                         help='Suite sizes to test (priority over "test_suite_coverages_count")')
     parser.add_argument('--test_suite_coverages_count', type=int, help='How many bins for coverage to use')
     parser.add_argument('--support', type=int, help='How many test suites to generate for each ts size of coverage bin',
-                        default=1000)
+                        default=100)
     parser.add_argument('--max_trace_size', type=int, help='Largest trace file to open (MB)', default=10)
 
     args, unknown = parser.parse_known_args()

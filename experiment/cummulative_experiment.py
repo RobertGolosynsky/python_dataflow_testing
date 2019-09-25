@@ -7,24 +7,19 @@ import numpy as np
 from loguru import logger
 from playhouse.sqlite_ext import SqliteExtDatabase
 from experiment.db_model.repo import *
+from experiment.folders import results_root
 from experiment.pydefects.get_projects import RepositoryManager
 from model.project import Project, Merger
 import combined_experiment_cli
 
 combined_experiment_cli_path = combined_experiment_cli.__file__
 
-database = "selection.db"
-plots = "plots"
-
-max_trace_size = 10  # MB
-results_root = Path(__file__).parent.parent.parent / "1experiments_results"
-dataset_path = results_root / "dataset_cumulative"
-graphs_path = results_root / "graphs_cumulative_next_20_offset_40"
-extra_requirements = [r.strip() for r in open("../requirements.txt").readlines()]
-
 if __name__ == "__main__":
-    if not os.path.isdir(plots):
-        os.makedirs(plots, exist_ok=True)
+    database = "selection.db"
+    max_trace_size = 10  # MB
+    dataset_path = results_root / "dataset_cumulative"
+    extra_requirements = [r.strip() for r in open("../requirements.txt").readlines()]
+
     db = SqliteExtDatabase(
         database,
         pragmas={
@@ -36,16 +31,19 @@ if __name__ == "__main__":
         }
     )
     DATABASE_PROXY.initialize(db)
+    lim = 20
+    off = 60
+    graphs_path = results_root / "graphs_cumulative_off_{}_lim_{}".format(off, lim)
     ms: List[Module] = Module.select() \
         .join(Repo) \
         .group_by(Repo.name) \
         .order_by(Module.total_cases.desc()) \
         .where(Repo.status == "good") \
-        .offset(40) \
-        .limit(20)
+        .offset(off) \
+        .limit(lim)
 
     min_test_cases = min(ms, key=operator.attrgetter("total_cases")).total_cases
-    test_suite_sizes = np.arange(start=1, stop=int(min_test_cases * 0.8), step=1) + 1
+    test_suite_sizes = np.arange(start=1, stop=int(min_test_cases * 0.8), step=2) + 1
     test_suite_sizes = " ".join(map(str, test_suite_sizes))
     for m in ms:
         manager = RepositoryManager(m.repo.url, m.repo.fixed_commit, m.path)

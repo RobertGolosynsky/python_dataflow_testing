@@ -8,8 +8,8 @@ from loguru import logger
 
 from config import COMMON_EXCLUDE
 from coverage_metrics.coverage_metric_enum import CoverageMetric
-from experiment.test_suite.collect_test_suite import random_suites
-from experiment.test_suite.suite_generator import SuiteGenerator
+from experiment.suites.collect_test_suite import random_suites
+from experiment.suites.suite_generator import SuiteGenerator
 from model.cfg.project_cfg import ProjectCFG
 from tracing.trace_reader import TraceReader
 

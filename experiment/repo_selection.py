@@ -42,12 +42,6 @@ if __name__ == "__main__":
 
     repo_managers = get_projects_bugs(
         "pydefects.db",
-        # limit=None,
-        # time_less_then=60,
-        # coverage_greater_then=60,
-        # passed_greater_than=15,
-        # unique_repos=False,
-        # no_errors=False
     )
     max_trace_size = 10  # MB
     results_root = Path(__file__).parent.parent.parent / "1experiments_results"
@@ -59,25 +53,19 @@ if __name__ == "__main__":
     logger.warning("Loading bad repos: {rs}", rs=repo_stat.bad_repos)
     logger.warning("Loading good repos: {rs}", rs=repo_stat.good_repos)
     logger.warning("Total repos in database with this query: {c}", c=len(repo_managers))
-    halting_projects = ["nnweaver", "pyflightdata","audio-clip-extractor"]
+    halting_projects = ["nnweaver", "pyflightdata", "audio-clip-extractor", "clu", "ghost"]
     for manager in repo_managers:
         repo_and_commit = manager.repo_name + "@" + manager.commit_hash
         logger.info(manager)
         try:
             repo = Repo.get_by_id(repo_and_commit)
-            continue
+            if repo.status == "bad":
+                continue
         except Exception as e:
             repo = Repo.create(id=repo_and_commit, status="bad", name=manager.repo_name, url=manager.url,
                                fixed_commit=manager.commit_hash, buggy_commit="")
             logger.warning("Processing {n}", n=repo_and_commit)
-        # if repo_stat.is_repo_bad(manager):
-        #     logger.warning("Repo {n} version {c} is bad excluded", n=manager.name, c=manager.commit_hash)
-        #     continue
-        # if not repo_stat.is_repo_good(manager):
-        #     logger.warning("Repo {n} version {c} is not good, we exclude it to try only good repos", n=manager.name,
-        #                    c=manager.commit_hash)
-        #
-        #     continue
+
         if manager.repo_name in halting_projects:
             continue
 
@@ -128,9 +116,9 @@ if __name__ == "__main__":
                     exc = exceptions[node_id]
                     logger.warning("Node id {node_id} failed with exception text: {exc}", node_id=node_id,
                                    exc=exc)
-                good_node_ids = set(node_ids_where_assertion_error(exceptions))
+                failing_on_assertion_node_ids = set(node_ids_where_assertion_error(exceptions))
                 repo.status = "no failed on assertion"
-                if len(good_node_ids) > 0:
+                if len(failing_on_assertion_node_ids) > 0:
                     repo.status = "no module cfg"
                     repo_stat.mark_repo_as_good(manager)
 
@@ -148,48 +136,55 @@ if __name__ == "__main__":
                     module_under_test_absolute = os.path.join(buggy_project.path, module_under_test_path)
                     covering_node_ids, paths = trace_reader.get_traces_for(module_under_test_absolute)
                     covering_node_ids = set(covering_node_ids)
-                    bad_node_ids = after - good_node_ids
+                    bad_node_ids = after - failing_on_assertion_node_ids
                     covering_node_ids -= bad_node_ids
+                    not_failing_node_ids = covering_node_ids - failing_on_assertion_node_ids
+                    not_failing_node_ids_as_params = " ".join(not_failing_node_ids)
+                    return_code = buggy_project.run_command(f"pytest {not_failing_node_ids_as_params}")
+                    if return_code == 0:
+                        logger.warning("Test cases can be run individually")
+                        cfg = ProjectCFG.create_from_path(buggy_project.path)
+                        module_cfg = cfg.module_cfgs.get(module_under_test_absolute)
+                        if module_cfg:
+                            mutants = get_mutants_of(module_under_test_absolute)
+                            stcov = StatementCoverage(buggy_project.path, buggy_project.path,
+                                                      max_trace_size=max_trace_size)
+                            brcov = BranchCoverage(buggy_project.path, buggy_project.path,
+                                                   max_trace_size=max_trace_size)
+                            ducov = DefUsePairsCoverage(buggy_project.path, buggy_project.path,
+                                                        max_trace_size=max_trace_size)
 
-                    cfg = ProjectCFG.create_from_path(buggy_project.path)
-                    module_cfg = cfg.module_cfgs.get(module_under_test_absolute)
-                    if module_cfg:
-                        mutants = get_mutants_of(module_under_test_absolute)
-                        stcov = StatementCoverage(buggy_project.path, buggy_project.path, max_trace_size=max_trace_size)
-                        brcov = BranchCoverage(buggy_project.path, buggy_project.path, max_trace_size=max_trace_size)
-                        ducov = DefUsePairsCoverage(buggy_project.path, buggy_project.path,
-                                                    max_trace_size=max_trace_size)
-
-                        repo.status = "good"
-                        module = Module.create(
-                            path=module_under_test_path,
-                            m_pairs=len(module_cfg.intramethod_pairs),
-                            im_pairs=len(module_cfg.intermethod_pairs),
-                            ic_pairs=len(module_cfg.interclass_pairs),
-                            statements=len(StatementCoverage.lines_in_module(module_cfg)),
-                            branches=len(module_cfg.branches),
-                            mutants=len(mutants),
-                            bugs=len(good_node_ids),
-                            total_cases=len(covering_node_ids),
-                            st_cov=stcov.coverage_of(module_under_test_absolute),
-                            br_cov=brcov.coverage_of(module_under_test_absolute),
-                            du_cov=ducov.coverage_of(module_under_test_absolute, of_type=CoverageMetric.ALL_PAIRS),
-                            time=elapsed_tracing,
-                            repo=repo,
-                            is_full_cfg=module_cfg.is_full_cfg
-                        )
-                        module.save()
-                        repo.save()
-                        for node_id in (covering_node_ids - good_node_ids):
-                            TestCase.create(module=module, node_id=node_id, result="passed")
-                        for node_id in good_node_ids:
-                            TestCase.create(module=module, node_id=node_id, result="revealed")
-                        logger.warning("Saving {repo_name} to database", repo_name=repo_and_commit)
+                            repo.status = "good"
+                            [module.delete() for module in repo.modules]
+                            module = Module.create(
+                                path=module_under_test_path,
+                                m_pairs=len(module_cfg.intramethod_pairs),
+                                im_pairs=len(module_cfg.intermethod_pairs),
+                                ic_pairs=len(module_cfg.interclass_pairs),
+                                statements=len(StatementCoverage.lines_in_module(module_cfg)),
+                                branches=len(module_cfg.branches),
+                                mutants=len(mutants),
+                                bugs=len(failing_on_assertion_node_ids),
+                                total_cases=len(covering_node_ids),
+                                st_cov=stcov.coverage_of(module_under_test_absolute),
+                                br_cov=brcov.coverage_of(module_under_test_absolute),
+                                du_cov=ducov.coverage_of(module_under_test_absolute, of_type=CoverageMetric.ALL_PAIRS),
+                                time=elapsed_tracing,
+                                repo=repo,
+                                is_full_cfg=module_cfg.is_full_cfg
+                            )
+                            module.save()
+                            repo.save()
+                            for node_id in (covering_node_ids - failing_on_assertion_node_ids):
+                                TestCase.create(module=module, node_id=node_id, result="passed")
+                            for node_id in failing_on_assertion_node_ids:
+                                TestCase.create(module=module, node_id=node_id, result="revealed")
+                            logger.warning("Saving {repo_name} to database", repo_name=repo_and_commit)
+                        else:
+                            logger.error("Could not find cfg for module under test {p}", p=module_under_test_absolute)
                     else:
-                        logger.error("Could not find cfg for module under test {p}", p=module_under_test_absolute)
-
-
-
+                        logger.warning("Tests don't have constant ids: {p}", p=module_under_test_path)
+                        repo_stat.mark_repo_as_bad(manager)
                 else:
                     repo_stat.mark_repo_as_bad(manager)
             else:
@@ -197,5 +192,4 @@ if __name__ == "__main__":
                 repo_stat.mark_repo_as_bad(manager)
 
         except Exception as e:
-            # logger.exception("What?!")
             print(traceback.format_exc())

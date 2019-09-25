@@ -7,18 +7,14 @@ import importlib
 import traceback
 from collections import defaultdict
 from pathlib import Path
-from pprint import pprint
 from shutil import move
 from typing import List
 
-from glob2 import glob
 from joblib import Memory
 from loguru import logger
 from mutmut import MutationID, Context
-from mutmut.__main__ import time_test_suite, python_source_files, add_mutations_by_file, Config, run_mutation_tests, \
-    run_mutation, mutate_file, tests_pass, tests_pass_expanded
-from mutmut.cache import update_line_numbers, filename_and_mutation_id_from_pk, hash_of_tests
-import random
+from mutmut.__main__ import time_test_suite, add_mutations_by_file, Config, mutate_file, tests_pass_expanded
+from mutmut.cache import update_line_numbers, hash_of_tests
 
 from tqdm import tqdm
 
@@ -26,22 +22,37 @@ cache_location = Path("/tmp/thorough/.cached_mutants").resolve()
 memory = Memory(location=cache_location, verbose=10000)
 
 
-@memory.cache(ignore=["timeout"], verbose=100000)
-def killed_mutants(path_to_module_under_test, test_cases_ids,
-                   project_root,
-                   timeout=None
-                   ):
+def killed_mutants(
+        path_to_module_under_test,
+        test_cases_ids,
+        project_root,
+        timeout=None
+):
+    rel_path = Path(path_to_module_under_test).relative_to(project_root)
+    nodes_joined = "".join(sorted(test_cases_ids))
+    key = f"{rel_path} {nodes_joined}"
+    return killed_mutants_raw(path_to_module_under_test, test_cases_ids,
+                              project_root,
+                              timeout=timeout, cache_key=key)
+
+
+@memory.cache(ignore=["path_to_module_under_test", "test_cases_ids", "project_root", "timeout"],
+              verbose=100000)
+def killed_mutants_raw(
+        path_to_module_under_test,
+        test_cases_ids,
+        project_root,
+        timeout=None,
+        cache_key=None
+):
     logger.debug("Killed mutants of project {proj} will be saved in folder {f}", proj=project_root, f=cache_location)
     test_time_multiplier = 2.0
     test_time_base = 0.0
     swallow_output = True
-    dict_synonyms = ""
     cache_only = False,
     pre_mutation = None
     post_mutation = None
     backup = False
-
-    dict_synonyms = [x.strip() for x in dict_synonyms.split(',')]
 
     save_working_dir = os.getcwd()
     os.chdir(project_root)

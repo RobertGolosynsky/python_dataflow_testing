@@ -37,7 +37,7 @@ def analyze_trace(trace_file, py_var_index):
     return unique_pairs
 
 
-@timing
+# @timing
 def analyze_trace_w_index(trace_file, cpp_var_index, cut=-1):
     np_array, file_size = read_df(trace_file, cut=cut)
     pairs_cpp_new = cpp_pairs_w_index(np_array, cpp_var_index)

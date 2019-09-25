@@ -2,7 +2,7 @@ import pandas as pd
 from loguru import logger
 
 from config import COMMON_EXCLUDE
-from experiment.test_suite.collect_test_suite import SubTestSuite
+from experiment.suites.collect_test_suite import SubTestSuite
 from experiment.core.generic_experiment import generic_experiment_size, generic_experiment_coverage, \
     bin_zero_to_one_column_to_percent
 from model.cfg.project_cfg import ProjectCFG

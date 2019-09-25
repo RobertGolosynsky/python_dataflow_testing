@@ -6,6 +6,7 @@ from pprint import pformat
 
 from loguru import logger
 
+from experiment.dataset_experiments.repo_statistics import RepoStatistics
 from experiment.pydefects.get_projects import get_projects_bugs
 from model.project import Project, Merger
 import real_bugs_experiment_cli

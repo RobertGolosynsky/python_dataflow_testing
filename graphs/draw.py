@@ -11,7 +11,7 @@ import networkx as nx
 
 from graphs import create as gc
 import graphs.util as gu
-from graphs.keys import REMOVED_KEY, CALL_KEY, RETURN_KEY
+from graphs.keys import REMOVED_KEY, CALL_KEY, RETURN_KEY, LINE_KEY
 
 
 def draw_byte_cfg(g):
@@ -106,7 +106,8 @@ def draw_byte_cfg_dot(g, pairs, func,
             mapping[node] = new_label
 
     # cfg = nx.relabel_nodes(cfg, mapping)
-    cfg = nx.relabel_nodes(cfg, {node: node + ":" +
+    node_lines = {node: str(data.get(LINE_KEY)) for node, data in cfg.nodes(data=True)}
+    cfg = nx.relabel_nodes(cfg, {node: node+"@ln"+node_lines[node] + ":" +
                                        cfg.nodes[node].get(gc.INSTRUCTION_KEY, None).opname + " " +
                                        str(cfg.nodes[node].get(gc.INSTRUCTION_KEY, None).argval)
     if gc.INSTRUCTION_KEY in cfg.nodes[node] else node + ":" + "None"
@@ -117,11 +118,11 @@ def draw_byte_cfg_dot(g, pairs, func,
             data["color"] = None
         if CALL_KEY in data:
             data["color"] = "blue"
-            data["label"] = "Call to "+data[CALL_KEY]
+            data["label"] = "Call to " + data[CALL_KEY]
 
         if RETURN_KEY in data:
             data["color"] = "red"
-            data["label"] = "Return from "+data[RETURN_KEY]
+            data["label"] = "Return from " + data[RETURN_KEY]
 
     dot = nx.nx_agraph.to_agraph(cfg)
     clusters = defaultdict(list)

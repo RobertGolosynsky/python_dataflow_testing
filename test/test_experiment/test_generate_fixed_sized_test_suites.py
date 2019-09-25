@@ -4,7 +4,7 @@ import pandas as pd
 
 import thorough
 from coverage_metrics.coverage_metric_enum import CoverageMetric
-from experiment.test_suite.suite_generator import SuiteGenerator
+from experiment.suites.suite_generator import SuiteGenerator
 
 from test.test_tracer import PROJECT_ROOT, create_new_temp_dir
 

@@ -45,12 +45,7 @@ class TestCreateByteCFG(unittest.TestCase):
             if not cfg:
                 print("cant create cfg", function.func)
                 continue
-        self.assertEqual(len(fns), 13)
-        self.assertEqual(len(clss), 1)
-            # file_name = f[0].__name__
-            # img_file = Path("astroid_cfgs") / (file_name + "_byte.png")
-            # block_graph = Path("astroid_cfgs") / (file_name + "_block.png")
-            # os.makedirs("astroid_cfgs", exist_ok=True)
-            # gd.draw_byte_cfg_dot(cfg, [], f[0], file=str(img_file))
-            # gd.draw_block_cfg(f[0], img_file=str(block_graph))
+        self.assertEqual(len(fns), 14)
+        self.assertEqual(len(clss), 2)
+
 

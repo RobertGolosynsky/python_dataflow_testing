@@ -1,5 +1,9 @@
+import os
 from collections import namedtuple, defaultdict
+from typing import Set
+
 import pandas as pd
+from tqdm import tqdm
 
 from coverage_metrics.coverage_interface import Coverage
 from coverage_metrics.util import percent
@@ -53,7 +57,7 @@ class DefUsePairsCoverage(Coverage):
             d[k].append(item)
         return d
 
-    def total_items_of(self, module_path, of_type=CoverageMetric.ALL_PAIRS):
+    def total_items_of(self, module_path, of_type=CoverageMetric.ALL_PAIRS) -> Set:
         module = self.project_cfg.module_cfgs.get(module_path)
         if not module:
             return set()
@@ -76,8 +80,12 @@ class DefUsePairsCoverage(Coverage):
 
     def covered_items_of(self, module_path, of_type=CoverageMetric.ALL_PAIRS, selected_node_ids=None) -> dict:
         data = {}
+        total_items = self.total_items_of(module_path, of_type=of_type)
         node_ids, traces_paths = self.trace_reader.get_traces_for(module_path, selected_node_ids=selected_node_ids)
-        for test_case, trace_file_path in zip(node_ids, traces_paths):
+        module_name = os.path.basename(module_path)
+        desc = "Finding def-use pairs of type {} for module {}".format(of_type.name, module_name)
+        for test_case, trace_file_path in tqdm(zip(node_ids, traces_paths), total=len(node_ids), desc=desc,
+                                               unit="test_case"):
             np_array, fsize = read_df(trace_file_path, max_size_mb=self.max_trace_size)
             if np_array is None:
                 continue
@@ -112,6 +120,7 @@ class DefUsePairsCoverage(Coverage):
                 data[test_case] = rename_vars(mp) | rename_vars(imp) | rename_vars(icp)
             else:
                 raise ValueError("Unknown coverage metric {} in parameter 'of_type'".format(of_type))
+            data[test_case] = data[test_case].intersection(total_items)
         return data
 
 
