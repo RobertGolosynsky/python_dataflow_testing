@@ -4,7 +4,7 @@ from test.test_tracer import CLEAN_LINKED_LIST_LL, CLEAN_LINKED_LIST_ROOT, creat
 from model.cfg.project_cfg import ProjectCFG
 from tracing.cpp_tracing.analyze import analyze_trace_w_index
 from tracing.index_factory import VarIndexFactory
-from tracing.trace_reader import read_df, read_scopes_for_trace_file, TraceReader
+from tracing.trace_reader import read_as_np_array, read_scopes_for_trace_file, TraceReader
 from tracing.cpp_tracing.intermethod_interclass_analyze import analyze
 
 import thorough
@@ -28,7 +28,7 @@ class TestComputeCoverage(unittest.TestCase):
         ll_py = str(CLEAN_LINKED_LIST_LL)
 
         def get_pairs(trace_file_path):
-            np_array, _ = read_df(trace_file_path)
+            np_array, _ = read_as_np_array(trace_file_path)
             scopes = read_scopes_for_trace_file(trace_file_path)
 
             inter_method_pairs, intra_class_pairs = analyze(trace_file_path, vi, scopes)

@@ -3,6 +3,7 @@ from model.cfg.function_cfg import FunctionCFG
 import util.astroid_util as au
 from loguru import logger
 
+
 class ModuleCFG(object):
     def __init__(self, module_path):
         logger.debug("Creating module cfg for module {m}", m=module_path)
@@ -36,16 +37,8 @@ class ModuleCFG(object):
         self.interclass_pairs = self._calculate_interclass()
 
         logger.debug("Finding branching points of the module")
-        self.branching_edges = {}
-        self.branches = set()
-        for cls_cfg in self.class_cfgs.values():
-            for func_cfg in cls_cfg.methods.values():
-                self.branching_edges.update(func_cfg.branching_edges)
-                self.branches.update(func_cfg.branches)
-
-        for func_cfg in self.function_cfgs.values():
-            self.branching_edges.update(func_cfg.branching_edges)
-            self.branches.update(func_cfg.branches)
+        from coverage_metrics.branch_coverage import find_branches
+        self.branches = find_branches(module_path)
 
         logger.debug("Done creating module cfg for module {m}", m=self.module_path)
 

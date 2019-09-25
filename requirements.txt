@@ -1,3 +1,5 @@
+asttokens
+coverage
 requests
 py
 seaborn

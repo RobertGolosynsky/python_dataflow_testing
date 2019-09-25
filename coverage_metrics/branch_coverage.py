@@ -1,96 +1,46 @@
-from collections import defaultdict
-
-import networkx as nx
+from coverage.parser import PythonParser
 from typing import Set
 
 from loguru import logger
 
 from coverage_metrics.statement_coverage import StatementCoverage
 from coverage_metrics.util import percent
-from graphs.keys import LINE_KEY, INSTRUCTION_KEY
 import pandas as pd
 
-from tracing.trace_reader import read_df
-from tracing.tracer import LINE_INDEX
+from tracing.trace_reader import read_as_dataframe
+from tracing.tracer import LINE_INDEX, SCOPE_INDEX
+from util.astroid_util import get_function_sources
 
 
-def find_branch_heads(g: nx.DiGraph, branch_node):
-    branch_start = g.nodes[branch_node].get(LINE_KEY)
-    if branch_start is None:
-        return set()
-
-    working_list = list(g.successors(branch_node))
+def find_branches(module_path):
     branches = set()
-    while len(working_list) > 0:
-        cur = working_list.pop()
-        instr = g.nodes[cur].get(INSTRUCTION_KEY)
-        if not instr:
-            continue
-        if instr.starts_line:
-            cur_line = g.nodes[cur].get(LINE_KEY)
-            if cur_line != branch_start:
-                branches.add((branch_start, cur_line))
-            else:
-                working_list.extend(list(g.successors(cur)))
-        else:
-            next_after_cur = list(g.successors(cur))
-            if len(next_after_cur) == 1:
-                next = next_after_cur[0]
-                instr = g.nodes[next].get(INSTRUCTION_KEY)
-                if instr and instr.starts_line:
-                    cur_line = g.nodes[next].get(LINE_KEY)
-                    if cur_line and cur_line != branch_start:
-                        branches.add((branch_start, cur_line))
+    with open(module_path) as f:
+        source = f.read()
+        if not source:
+            return set()
+        for start_line, function_source in get_function_sources(module_path, source):
+            parser = PythonParser(text=function_source)
+            parser.parse_source()
+            offset = set()
+            arcs = parser.arcs()
+            for fr, to in arcs:
+                if fr < 0 or to < 0:
+                    continue
 
-        # else:
-        #     cur = next_node_linear(g, cur)
-        #     if cur:
-        #         cur_line = g.nodes[cur].get(LINE_KEY)
-        #         if cur_line != branch_start:
-        #             branches.add((branch_start, cur_line))
-        #         else:
-        #             working_list.extend(list(g.successors(cur)))
+                new_fr = fr + start_line - 1
+                new_to = to + start_line - 1
+                offset.add((new_fr, new_to))
+
+            branches.update(offset)
     return branches
 
-def next_node_linear(g:nx.DiGraph, node):
-    line = g.nodes[node].get(LINE_KEY)
-    while True:
-        succs = list(g.successors(node))
-        if len(succs) == 1:
-            succ = succs[0]
-            cur = g.nodes[succ].get(LINE_KEY)
-            if not cur:
-                return None # reached exit node potentially
-            if cur>line:
-                return succ
-            elif cur<line:
-                return None
-            else:
-                node = succ
-        else:
-            return None
 
-def find_branches(g: nx.DiGraph) -> (dict, set):
-    branching_edges = defaultdict(set)
-    countable_representation = set()
-    for branching_point in g.nodes():
-        if g.out_degree[branching_point] > 1:
-            brs = find_branch_heads(g, branching_point)
-            for fr, to in brs:
-                branching_edges[fr].add(to)
-                countable_representation.add((fr, to))
-
-    return branching_edges, countable_representation
-
-
-def find_covered_branches(lines, branching_edges) -> Set:
-    covered_branches = set()
-    for line, next_line in zip(lines, lines[1:]):
-        if line in branching_edges:
-            if next_line in branching_edges[line]:
-                covered_branches.add((line, next_line))
-
-    return covered_branches
+def find_covered_branches(df: pd.DataFrame, branches) -> Set:
+    possible_branches = set()
+    for scope, df in df.groupby(SCOPE_INDEX - 1):
+        lines = df[LINE_INDEX - 1]
+        possible_branches |= set(zip(lines, lines[1:]))
+    return possible_branches.intersection(branches)
 
 
 class BranchCoverage(StatementCoverage):
@@ -155,10 +105,9 @@ class BranchCoverage(StatementCoverage):
         total_items = self.total_items_of(module_path)
         branching_edges = self._branching_edges_of(module_path)
         for node_id, trace_file_path in zip(node_ids, paths):
-            df, size = read_df(trace_file_path, max_size_mb=self.max_trace_size)
+            df, size = read_as_dataframe(trace_file_path, max_size_mb=self.max_trace_size)
             if df is not None:
-                lines = df.T[LINE_INDEX]
-                covered_branches = find_covered_branches(lines, branching_edges)
+                covered_branches = find_covered_branches(df, branching_edges)
                 covered_lines[node_id] = covered_branches.intersection(total_items)
             else:
                 covered_lines[node_id] = set()

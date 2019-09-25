@@ -5,7 +5,7 @@ from model.cfg.project_cfg import ProjectCFG
 from tracing.cpp_tracing.analyze import analyze_trace_w_index
 from tracing.cpp_tracing.intermethod_interclass_analyze import analyze
 from tracing.index_factory import VarIndexFactory
-from tracing.trace_reader import read_df, TraceReader, read_scopes_for_trace_file
+from tracing.trace_reader import read_as_np_array, TraceReader, read_scopes_for_trace_file
 from cpp.cpp_import import load_cpp_extension
 
 import thorough
@@ -32,7 +32,7 @@ class TestTraceAnalyzer(unittest.TestCase):
         ll_py = str(CLEAN_LINKED_LIST_LL)
 
         def get_pairs(trace_file_path):
-            np_array, _ = read_df(trace_file_path)
+            np_array, _ = read_as_np_array(trace_file_path)
             idx_pairs = analyze_trace_w_index(trace_file_path, cppvi)
 
             def rename_vars(s):
@@ -64,7 +64,7 @@ class TestTraceAnalyzer(unittest.TestCase):
         ll_py = str(CLEAN_LINKED_LIST_LL)
 
         def get_pairs(trace_file_path):
-            np_array, _ = read_df(trace_file_path)
+            np_array, _ = read_as_np_array(trace_file_path)
             scopes = read_scopes_for_trace_file(trace_file_path)
             im_pairs, ic_pairs = analyze(trace_file_path, cppvi, scopes)
 

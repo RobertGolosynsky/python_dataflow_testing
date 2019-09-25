@@ -1,11 +1,11 @@
 from tracing.index_factory import VarIndex
-from tracing.trace_reader import read_df
+from tracing.trace_reader import read_as_np_array
 from tracing.tracer import SCOPE_INDEX, IDX_INDEX, LINE_INDEX
 
 
 # TODO: group by self
 def analyze(trace_path, index: VarIndex, scopes_ends):
-    df, size_mb = read_df(trace_path)
+    df, size_mb = read_as_np_array(trace_path)
     defs, uses = index.get_object_vars(df)
     reach_in = []
     intermethod_pairs = []

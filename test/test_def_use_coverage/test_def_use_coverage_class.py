@@ -20,4 +20,4 @@ class TestDefUseCoverageClass(unittest.TestCase):
         coverage = DefUsePairsCoverage(trace_root, project_root, exclude_folders=exclude_folders)
         report = coverage.report()
         # check that there are no NaN values in report
-        # self.assertFalse(report.isnull().values.any())
+        self.assertFalse(report.isnull().values.any())

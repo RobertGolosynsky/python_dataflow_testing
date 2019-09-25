@@ -4,7 +4,7 @@ from coverage_metrics.coverage_interface import Coverage
 from coverage_metrics.util import percent
 from graphs.keys import LINE_KEY
 from model.cfg.project_cfg import ProjectCFG
-from tracing.trace_reader import TraceReader, read_df
+from tracing.trace_reader import TraceReader, read_as_np_array
 from tracing.tracer import LINE_INDEX
 
 from loguru import logger
@@ -89,7 +89,7 @@ class StatementCoverage(Coverage):
                                                            selected_node_ids=selected_node_ids)
         total_items = self.total_items_of(module_path)
         for node_id, trace_file_path in zip(node_ids, paths):
-            df, size = read_df(trace_file_path, max_size_mb=self.max_trace_size)
+            df, size = read_as_np_array(trace_file_path, max_size_mb=self.max_trace_size)
             if df is not None:
                 lines = df.T[LINE_INDEX]
                 covered_lines[node_id] = set(lines).intersection(total_items)

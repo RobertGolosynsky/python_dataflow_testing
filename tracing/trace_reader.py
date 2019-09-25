@@ -67,15 +67,15 @@ class TraceReader:
     def trace_path(self, node_id: str, module_under_test_path: str):
         folder_id = self.folders_mapping.get_int(node_id)
         file_id = self.files_mapping.get_int(module_under_test_path)
-        return self.main_root/str(folder_id)/(str(file_id)+os.extsep+Tracer.trace_file_ext)
+        return self.main_root / str(folder_id) / (str(file_id) + os.extsep + Tracer.trace_file_ext)
 
     def get_modules_covered_by(self, node_id):
         folder_index = self.folders_mapping.get_int(node_id)
         if not folder_index:
-            logger.warning("Node {node_id} was not found in traces",node_id=node_id)
+            logger.warning("Node {node_id} was not found in traces", node_id=node_id)
             return []
 
-        node_trace_folder = self.main_root/str(folder_index)
+        node_trace_folder = self.main_root / str(folder_index)
         modules_indexes = set()
         for trace_file in node_trace_folder.iterdir():
             modules_indexes.add(int(trace_file.stem))
@@ -89,25 +89,22 @@ class TraceReader:
         return modules
 
 
-def read_df(f, cut=-1, max_size_mb=None):
-    # logger.debug("Reading trace {f}", f=f)
+def read_as_dataframe(f, max_size_mb=None):
     file_size = os.stat(f).st_size // (1024 * 1024)
     if max_size_mb and file_size > max_size_mb:
         return None, file_size
-    np_array = pd.read_csv(
+    return pd.read_csv(
         f,
         header=None,
-        delimiter=",",
-        # dtype={
-        #     # IDX_INDEX: "int64",
-        #     FILE_INDEX: "int16",
-        #     LINE_INDEX: "int16",
-        #     SELF_INDEX: "int",
-        #     SCOPE_INDEX: "int64"
-        # },
         low_memory=True
-    ).values
+    ), file_size
 
+
+def read_as_np_array(f, cut=-1, max_size_mb=None):
+    # logger.debug("Reading trace {f}", f=f)
+
+    df, file_size = read_as_dataframe(f, max_size_mb=max_size_mb)
+    np_array = df.values
     prev_len = len(np_array)
     new_len = prev_len
     if cut > -1:

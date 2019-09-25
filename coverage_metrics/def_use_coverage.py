@@ -12,7 +12,7 @@ from model.cfg.project_cfg import ProjectCFG
 from tracing.cpp_tracing.analyze import analyze_trace_w_index
 from tracing.cpp_tracing.intermethod_interclass_analyze import analyze
 from tracing.index_factory import VarIndexFactory
-from tracing.trace_reader import TraceReader, read_df, read_scopes_for_trace_file
+from tracing.trace_reader import TraceReader, read_as_np_array, read_scopes_for_trace_file
 
 row = namedtuple("row", ["test_case", "module_under_test",
                          "intramethod_pairs", "intermethod_pairs", "interclass_pairs"])
@@ -86,7 +86,7 @@ class DefUsePairsCoverage(Coverage):
         desc = "Finding def-use pairs of type {} for module {}".format(of_type.name, module_name)
         for test_case, trace_file_path in tqdm(zip(node_ids, traces_paths), total=len(node_ids), desc=desc,
                                                unit="test_case"):
-            np_array, fsize = read_df(trace_file_path, max_size_mb=self.max_trace_size)
+            np_array, fsize = read_as_np_array(trace_file_path, max_size_mb=self.max_trace_size)
             if np_array is None:
                 continue
 

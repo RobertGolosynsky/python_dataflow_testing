@@ -5,7 +5,7 @@ import gc
 from cpp.cpp_import import load_cpp_extension
 import numpy as np
 
-from tracing.trace_reader import read_df
+from tracing.trace_reader import read_as_np_array
 from util.misc import timing
 
 def_use_pairs_ext = load_cpp_extension("def_use_pairs_ext")
@@ -13,7 +13,7 @@ def_use_pairs_ext = load_cpp_extension("def_use_pairs_ext")
 
 @timing
 def analyze_trace(trace_file, py_var_index):
-    np_array, file_size = read_df(trace_file, cut=-1)
+    np_array, file_size = read_as_np_array(trace_file, cut=-1)
 
     st = time()
     defs, uses = py_var_index.get_vars(np_array)
@@ -39,7 +39,7 @@ def analyze_trace(trace_file, py_var_index):
 
 # @timing
 def analyze_trace_w_index(trace_file, cpp_var_index, cut=-1):
-    np_array, file_size = read_df(trace_file, cut=cut)
+    np_array, file_size = read_as_np_array(trace_file, cut=cut)
     pairs_cpp_new = cpp_pairs_w_index(np_array, cpp_var_index)
     unique_pairs = _unique_pairs(pairs_cpp_new)
     return unique_pairs

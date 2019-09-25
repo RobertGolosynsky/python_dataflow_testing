@@ -7,7 +7,7 @@ from pathlib import Path
 import tempfile
 import inspect
 
-from tracing.trace_reader import read_df, TraceReader
+from tracing.trace_reader import read_as_np_array, TraceReader
 from config import PROJECT_NAME
 
 THIS_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
@@ -52,5 +52,5 @@ def trace_this(function, project_root=PROJECT_ROOT, trace_root=TEMP_DIRECTORY, a
 
 def get_trace(function, *args, **kwargs):
     trace_file_path = trace_this(function, *args, **kwargs)
-    trace, _ = read_df(trace_file_path)
+    trace, _ = read_as_np_array(trace_file_path)
     return trace
