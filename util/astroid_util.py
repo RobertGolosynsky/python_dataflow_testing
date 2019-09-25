@@ -1,6 +1,8 @@
 import ast
+import textwrap
 import traceback
 
+import asttokens as asttokens
 from loguru import logger
 
 
@@ -185,3 +187,14 @@ def get_calls(node, call_number=0):
         calls.extend(new_calls)
         call_number += len(calls)
     return calls
+
+
+def get_function_sources(fname, source):
+    atok = asttokens.ASTTokens(source, parse=True, filename=fname)
+    atok.mark_tokens(atok.tree)
+    res = []
+    for node in ast.walk(atok.tree):
+        if isinstance(node, ast.FunctionDef):
+            deindented_text = textwrap.dedent(atok.get_text(node))
+            res.append((node.lineno, deindented_text))
+    return res

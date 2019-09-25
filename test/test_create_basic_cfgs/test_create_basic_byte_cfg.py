@@ -45,7 +45,7 @@ class TestCreateByteCFG(unittest.TestCase):
             if not cfg:
                 print("cant create cfg", function.func)
                 continue
-        self.assertEqual(len(fns), 14)
+        self.assertEqual(len(fns), 15)
         self.assertEqual(len(clss), 2)
 
 

@@ -1,3 +1,4 @@
+import coverage
 from coverage.parser import PythonParser
 from typing import Set
 
@@ -20,9 +21,13 @@ def find_branches(module_path):
             return set()
         for start_line, function_source in get_function_sources(module_path, source):
             parser = PythonParser(text=function_source)
-            parser.parse_source()
+            try:
+                parser.parse_source()
+                arcs = parser.arcs()
+            except coverage.misc.NotPython as e:
+                logger.error(e)
+                return set()
             offset = set()
-            arcs = parser.arcs()
             for fr, to in arcs:
                 if fr < 0 or to < 0:
                     continue
@@ -63,14 +68,6 @@ class BranchCoverage(StatementCoverage):
 
         return df
 
-    def _branching_edges_of(self, module_path):
-        tracee_module = self.project_cfg.module_cfgs.get(module_path)
-        if not tracee_module:
-            return set()
-        branching_edges = tracee_module.branching_edges
-
-        return branching_edges
-
     def _calculate_covered_branches(self, module_path, lines_exercised):
 
         branches = self.total_items_of(module_path)
@@ -87,27 +84,14 @@ class BranchCoverage(StatementCoverage):
         return branches
 
     def covered_items_of(self, module_path, of_type=None, selected_node_ids=None) -> dict:
-        # branches = self.total_items_of(module_path)
-        #
-        # covered_statements = super().covered_items_of(module_path, of_type=None, selected_node_ids=selected_node_ids)
-        # covered_branches_of_node_id = {}
-        #
-        # for node_id, lines in covered_statements.items():
-        #     not_exercised_branches = branches - lines
-        #     covered_branches = branches - not_exercised_branches
-        #     covered_branches_of_node_id[node_id] = covered_branches
-        #
-        # return covered_branches_of_node_id
-        #
         covered_lines = {}
         node_ids, paths = self.trace_reader.get_traces_for(module_path=module_path,
                                                            selected_node_ids=selected_node_ids)
         total_items = self.total_items_of(module_path)
-        branching_edges = self._branching_edges_of(module_path)
         for node_id, trace_file_path in zip(node_ids, paths):
             df, size = read_as_dataframe(trace_file_path, max_size_mb=self.max_trace_size)
             if df is not None:
-                covered_branches = find_covered_branches(df, branching_edges)
+                covered_branches = find_covered_branches(df, total_items)
                 covered_lines[node_id] = covered_branches.intersection(total_items)
             else:
                 covered_lines[node_id] = set()

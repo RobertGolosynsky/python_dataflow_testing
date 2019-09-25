@@ -19,7 +19,7 @@ class TestThisProjectCFG(unittest.TestCase):
 
     def test_astroid_util_definitions_uses(self):
         project_cfg = ProjectCFG.create_from_path(PROJECT_PATH, exclude_folders=exclude_folders)
-        line = 18
+        line = 20
         defs, uses = project_cfg.get_variables(ASTROID_UTIL, line)
         self.assertIn("line", defs)
         self.assertIn("function_def", uses)
