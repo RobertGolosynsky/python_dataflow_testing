@@ -40,6 +40,11 @@ class TraceReader:
     def get_node_ids(self):
         return self.folders_mapping.keys()
 
+    def get_not_failing_node_ids(self, module_under_test_path):
+        all_node_ids, paths = self.get_traces_for(module_under_test_path)
+        failing_node_ids = self.read_failed_test_cases()
+        return set(all_node_ids) - set(failing_node_ids)
+
     def get_traces_for(self, module_path, selected_node_ids=None):
         file_index = self.files_mapping.get_int(module_path)
         file_name = _filename(file_index)

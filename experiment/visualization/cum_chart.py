@@ -1,52 +1,75 @@
 import pandas as pd
-from experiment.cummulative_experiment import results_root
-from combined_experiment_cli import DataFrameType
-import seaborn as sns
-from experiment.core.mutation_experiment import METRIC, SUITE_SIZE, SUITE_COVERAGE, SUITE_COVERAGE_BIN, MUTATION_SCORE
-from experiment.core.real_bugs_experiment import METRIC, SUITE_SIZE, SUITE_COVERAGE, SUITE_COVERAGE_BIN, \
-    BUG_REVEALED_SCORE
-from experiment.visualization.other import read_data_frames_of_type, Plot, draw_plots_vertically, cov_bin_key
+from experiment.core.columns import SUITE_SIZE, SUITE_COVERAGE_BIN, METRIC, MUTATION_SCORE, BUG_REVEALED_SCORE, \
+    DataFrameType
+from experiment.folders import results_root
+from experiment.visualization.other import draw_vertically, read_data_frames_of_type, normalize_columns
 
-if __name__ == "__main__":
-    df_root = results_root / "graphs_cumulative_off_{}_lim_{}".format(0, 20)
 
+def draw_biased(df_root, out_folder):
     # size
-    all_m_size = read_data_frames_of_type(df_root, DataFrameType.MUTATION_FIXED_SIZE)
-    all_b_size = read_data_frames_of_type(df_root, DataFrameType.BUGS_FIXED_SIZE)
-    df_all = pd.concat(all_b_size + all_m_size, axis=0, ignore_index=True, sort=False)
-
-    count_plot = Plot(df=df_all, plt_type=sns.countplot, ordering=None, hue=METRIC, palette="husl", dodge=True)
-    mutation_plot = Plot(df=df_all, plt_type=sns.pointplot, ordering=None, y=MUTATION_SCORE, hue=METRIC, palette="husl",
-                         capsize=.2, kind="point", dodge=True)
-    bugs_plot = Plot(df=df_all, plt_type=sns.pointplot, ordering=None, y=BUG_REVEALED_SCORE, hue=METRIC, palette="husl",
-                     capsize=.2, kind="point", dodge=True)
-    size_plot = Plot(df=df_all, plt_type=sns.pointplot, ordering=None, y=SUITE_COVERAGE, hue=METRIC, palette="husl",
-                     capsize=.2, kind="point", dodge=True)
-    plots = [
-        bugs_plot,
-        mutation_plot,
-        size_plot,
-        count_plot
-    ]
-    draw_plots_vertically("main_plot_size.png", sharedx=SUITE_SIZE, plots=plots)
+    size_dfs = read_data_frames_of_type(df_root, DataFrameType.FIXED_SIZE)
+    size_dfs = pd.concat(size_dfs, axis=0, ignore_index=True, sort=False)
+    image_file = out_folder / "fixed_size.png"
+    draw_vertically(size_dfs, SUITE_SIZE, image_file)
 
     # coverage
-    all_m_cov = read_data_frames_of_type(df_root, DataFrameType.MUTATION_FIXED_COVERAGE)
-    all_b_cov = read_data_frames_of_type(df_root, DataFrameType.BUGS_FIXED_COVERAGE)
-    df_all = pd.concat(all_m_cov + all_b_cov, axis=0, ignore_index=True, sort=False)
-    df_all = df_all[pd.notnull(df_all[SUITE_COVERAGE_BIN])]
+    coverage_dfs = read_data_frames_of_type(df_root, DataFrameType.FIXED_COVERAGE)
+    coverage_dfs = pd.concat(coverage_dfs, axis=0, ignore_index=True, sort=False)
+    coverage_dfs = coverage_dfs[pd.notnull(coverage_dfs[SUITE_COVERAGE_BIN])]
+    image_file = out_folder / "fixed_coverage.png"
+    draw_vertically(coverage_dfs, SUITE_COVERAGE_BIN, image_file)
 
-    count_plot = Plot(df=df_all, plt_type=sns.countplot, ordering=cov_bin_key, hue=METRIC, palette="husl", dodge=True)
-    mutation_plot = Plot(df=df_all, plt_type=sns.pointplot, ordering=cov_bin_key, y=MUTATION_SCORE, hue=METRIC, palette="husl",
-                         capsize=.2, kind="point", dodge=True)
-    bugs_plot = Plot(df=df_all, plt_type=sns.pointplot, ordering=cov_bin_key, y=BUG_REVEALED_SCORE, hue=METRIC, palette="husl",
-                     capsize=.2, kind="point", dodge=True)
-    size_plot = Plot(df=df_all, plt_type=sns.pointplot, ordering=cov_bin_key, y=SUITE_SIZE, hue=METRIC, palette="husl",
-                     capsize=.2, kind="point", dodge=True)
-    plots = [
-        bugs_plot,
-        mutation_plot,
-        size_plot,
-        count_plot
-    ]
-    draw_plots_vertically("main_plot_cov.png", sharedx=SUITE_COVERAGE_BIN, plots=plots)
+
+def draw_grouped(df_root, out_folder):
+    # size
+    dfs = read_data_frames_of_type(df_root, DataFrameType.FIXED_SIZE)
+    size_dfs = []
+    for df in dfs:
+        try:
+            size_dfs.append(df.groupby([SUITE_SIZE, METRIC], as_index=False).mean())
+        except:
+            with pd.option_context('display.max_rows', None, 'display.max_columns',
+                                   None):  # more options can be specified also
+                print(df)
+    size_dfs = pd.concat(size_dfs, axis=0, ignore_index=True, sort=False)
+
+    image_file = out_folder / "fixed_size_grouped.png"
+    draw_vertically(size_dfs, SUITE_SIZE, image_file)
+
+    # coverage
+    coverage_dfs = read_data_frames_of_type(df_root, DataFrameType.FIXED_COVERAGE)
+
+    coverage_dfs = [df.groupby([SUITE_COVERAGE_BIN, METRIC], as_index=False).mean() for df in coverage_dfs]
+    coverage_dfs = pd.concat(coverage_dfs, axis=0, ignore_index=True, sort=False)
+
+    image_file = out_folder / "fixed_coverage_grouped.png"
+    draw_vertically(coverage_dfs, SUITE_COVERAGE_BIN, image_file)
+
+
+def draw_grouped_normalized(df_root, out_folder):
+    # size
+    size_dfs = read_data_frames_of_type(df_root, DataFrameType.FIXED_SIZE)
+    size_dfs = [normalize_columns(df, [MUTATION_SCORE, BUG_REVEALED_SCORE]) for df in size_dfs]
+
+    df_all = [df.groupby([SUITE_SIZE, METRIC], as_index=False).mean() for df in size_dfs]
+    df_all = pd.concat(df_all, axis=0, ignore_index=True, sort=False)
+
+    image_file = out_folder / "fixed_size_grouped_normalized.png"
+    draw_vertically(df_all, SUITE_SIZE, image_file)
+
+    # coverage
+    coverage_dfs = read_data_frames_of_type(df_root, DataFrameType.FIXED_COVERAGE)
+
+    coverage_dfs = [normalize_columns(df, [MUTATION_SCORE, BUG_REVEALED_SCORE]) for df in coverage_dfs]
+
+    df_all = [df.groupby([SUITE_COVERAGE_BIN, METRIC], as_index=False).mean() for df in coverage_dfs]
+    df_all = pd.concat(df_all, axis=0, ignore_index=True, sort=False)
+
+    image_file = out_folder / "fixed_coverage_grouped_normalized.png"
+    draw_vertically(df_all, SUITE_COVERAGE_BIN, image_file)
+
+
+if __name__ == "__main__":
+    graphs_path = results_root / "graphs_cumulative_off_{}_lim_{}".format(0, 10)
+    general_graphs = graphs_path / "graphs"
+    draw_grouped_normalized(graphs_path, general_graphs)

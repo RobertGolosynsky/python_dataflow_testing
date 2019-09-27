@@ -8,27 +8,19 @@ from coverage_metrics.util import percent
 
 class SubTestSuite:
     def __init__(self, test_cases, coverage, covered_items, all_coverage_items=None):
-        if not isinstance(test_cases, tuple):
-            test_cases = tuple(test_cases)
-        self.test_cases = test_cases
-
+        self.test_cases = frozenset(test_cases)
         self.coverage = coverage
-
-        if not isinstance(covered_items, frozenset):
-            covered_items = frozenset(covered_items)
-        self.covered_items = covered_items
-
+        self.covered_items = frozenset(covered_items)
         self.all_coverage_items = all_coverage_items
 
     def __hash__(self):
-        return hash(self.test_cases) + hash(self.coverage) + hash(self.covered_items)
+        return hash(self.test_cases)
 
     def __eq__(self, other):
-        return self.test_cases == other.test_cases \
-               and self.coverage == other.coverage \
-               and self.covered_items == other.covered_items
+        return self.test_cases == other.test_cases
 
 
+# TODO: fix this
 def generate_test_suites_fixed_size(data,
                                     n,
                                     total_coverage_items: set,
@@ -39,25 +31,32 @@ def generate_test_suites_fixed_size(data,
     if len(total_coverage_items) == 0:
         return []
     suites = set()
-    suites_cases = set()
+    # suites_cases = set()
     covered_item_sets = set()
     failure_count = 0
     while len(suites) < n:
+
         if failure_count > consecutive_failures_allowed:
+            # print("herehere")
             break
         suite = generate_suite_of_fixed_size(data, exact_size)
+        if not suite:
+            failure_count += 1
+            # print("ooppssss")
+            continue
         covered_items = set()
         for node_id in suite:
             covered_items.update(data[node_id])
         covered_items = frozenset(covered_items)
-        if check_unique_items_covered:
-            covers_unique_items = covered_items not in covered_item_sets
-            should_check_further = covers_unique_items
-            # print("covers_unique_items", covers_unique_items)
-        else:
-            should_check_further = True
+        # if check_unique_items_covered:
+        #     covers_unique_items = covered_items not in covered_item_sets
+        #     should_check_further = covers_unique_items
+        #     # print("covers_unique_items", covers_unique_items)
+        # else:
+        #     should_check_further = True
         # if frozenset(suite) in suites_cases:
         # print("Duplicate test suite")
+        should_check_further = True
         if should_check_further:
             coverage = percent(covered_items, total_coverage_items)
             ts = SubTestSuite(suite, coverage, covered_items)
@@ -65,7 +64,7 @@ def generate_test_suites_fixed_size(data,
                 failure_count = 0
                 suites.add(ts)
                 covered_item_sets.add(covered_items)
-                suites_cases.add(frozenset(suite))
+                # suites_cases.add(frozenset(suite))
             else:
                 failure_count += 1
             # else:
@@ -81,22 +80,29 @@ def generate_test_suites_fixed_coverage(data,
                                         total_coverage_items: set,
                                         coverage_boundary,
                                         check_unique_items_covered=False,
-                                        consecutive_failures_allowed=20
+                                        consecutive_failures_allowed=100
                                         ) -> List[SubTestSuite]:
     total_coverage_items_count = len(total_coverage_items)
     if total_coverage_items_count == 0:
         return []
     suites = set()
-    suites_cases = set()
+    # suites_cases = set()
     covered_item_sets = set()
     failure_count = 0
     while len(suites) < n:
         if failure_count > consecutive_failures_allowed:
             break
-        suite = generate_suite_of_fixed_coverage(data, total_coverage_items_count, coverage_boundary)
+        suite = generate_suite_of_fixed_coverage(
+            data,
+            total_coverage_items_count,
+            coverage_boundary,
+            failure_allowed=5
+        )
         if suite is None:
             # can't have a test suite of this coverage boundary
-            break
+            failure_count += 1
+            # print("ooppssss")
+            continue
         covered_items = set()
         for node_id in suite:
             covered_items.update(data[node_id])
@@ -113,7 +119,7 @@ def generate_test_suites_fixed_coverage(data,
                 failure_count = 0
                 suites.add(ts)
                 covered_item_sets.add(covered_items)
-                suites_cases.add(frozenset(suite))
+                # suites_cases.add(frozenset(suite))
             else:
                 failure_count += 1
         else:
@@ -150,14 +156,14 @@ def generate_suite_of_fixed_size(node_ids_coverage_items: dict, exact_size):
     for _ in range(exact_size - 1):
         node_id = pick_next_node(node_ids_coverage_items, suite, covered_items)
         if node_id is None:
-            return suite
+            return None
         suite.add(node_id)
         node_coverage = node_ids_coverage_items[node_id]
         covered_items.update(node_coverage)
     return suite
 
 
-def generate_suite_of_fixed_coverage(node_ids_coverage_items: dict, total_items, coverage):
+def generate_suite_of_fixed_coverage(node_ids_coverage_items: dict, total_items, boundary, failure_allowed=20):
     node_ids = list(node_ids_coverage_items.keys())
 
     initial_node = random.choice(node_ids)
@@ -165,15 +171,31 @@ def generate_suite_of_fixed_coverage(node_ids_coverage_items: dict, total_items,
 
     covered_items = set()
     covered_items.update(node_ids_coverage_items[initial_node])
-    while len(covered_items) / total_items < coverage:
-        if len(suite) == len(node_ids):
-            return None
+
+    l, r = boundary
+    failure_count = 0
+    while True:
         node_id = pick_next_node(node_ids_coverage_items, suite, covered_items)
         if node_id is None:
-            return suite
-        suite.add(node_id)
+            return None
+
         node_coverage = node_ids_coverage_items[node_id]
-        covered_items.update(node_coverage)
+        _covered_items = covered_items | node_coverage
+
+        coverage = len(_covered_items) / total_items
+        if coverage > r:
+            failure_count += 1
+            if failure_count > failure_allowed:
+                return None
+        else:
+            suite.add(node_id)
+            covered_items = _covered_items
+            if coverage >= l:
+                return suite
+
+            if len(suite) == len(node_ids):
+                return None
+
     return suite
 
 

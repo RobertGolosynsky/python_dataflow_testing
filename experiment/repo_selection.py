@@ -16,7 +16,7 @@ from experiment.dataset_experiments.dataset_real_bugs_experiment import node_ids
 from experiment.dataset_experiments.repo_statistics import RepoStatistics
 
 from experiment.db_model.repo import DATABASE_PROXY, Repo, tables, Module, TestCase
-from experiment.mutation import get_mutants_of
+from experiment.core.mutation import get_mutants_of
 from experiment.pydefects.get_projects import get_projects_bugs
 from model.cfg.project_cfg import ProjectCFG
 from model.project import Project, Merger

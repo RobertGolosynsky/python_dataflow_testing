@@ -3,16 +3,11 @@ from typing import Set
 import pandas as pd
 from loguru import logger
 
+from experiment.core.columns import SUITE_SIZE, METRIC, BUG_REVEALED_SCORE, SUITE_COVERAGE, SUITE_COVERAGE_BIN
 from experiment.suites.collect_test_suite import SubTestSuite
 from experiment.core.generic_experiment import generic_experiment_size, DEFAULT_METRICS, generic_experiment_coverage, \
     bin_zero_to_one_column_to_percent
 from tracing.trace_reader import TraceReader
-
-METRIC = "Metric"
-SUITE_SIZE = "Suite size"
-SUITE_COVERAGE = "Coverage"
-SUITE_COVERAGE_BIN = "Coverage bins (%)"
-BUG_REVEALED_SCORE = "Bugs revealed score"
 
 
 def run_real_bugs_experiment_fixed_size(
@@ -31,20 +26,18 @@ def run_real_bugs_experiment_fixed_size(
     total_revealing_node_ids = len(revealing_node_ids)
 
     trace_reader = TraceReader(project_root)
-    failing_node_ids = trace_reader.read_failed_test_cases()
-    all_node_ids, _ = trace_reader.get_traces_for(module_under_test_path)
-    not_failing_node_ids = set(all_node_ids) - set(failing_node_ids)
+    not_failing_node_ids = trace_reader.get_not_failing_node_ids(module_under_test_path)
 
-    scoring_function = get_scoring_function(revealing_node_ids)
+    scoring_function = get_bugs_scoring_function(revealing_node_ids)
     points = generic_experiment_size(
         project_root,
         module_under_test_path,
-        scoring_function,
+        [scoring_function],
         test_suite_sizes_count=test_suite_sizes_count,
         test_suite_sizes=test_suite_sizes,
         max_trace_size=max_trace_size,
         coverage_metrics=coverage_metrics,
-        node_ids=not_failing_node_ids | revealing_node_ids,
+        node_ids=set(not_failing_node_ids) | set(revealing_node_ids),
         support=support
     )
 
@@ -67,15 +60,13 @@ def run_real_bugs_experiment_fixed_coverage(
     revealing_node_ids = set(revealing_node_ids)
 
     trace_reader = TraceReader(project_root)
-    failing_node_ids = trace_reader.read_failed_test_cases()
-    all_node_ids, _ = trace_reader.get_traces_for(module_under_test_path)
-    not_failing_node_ids = set(all_node_ids) - set(failing_node_ids)
+    not_failing_node_ids = trace_reader.get_not_failing_node_ids(module_under_test_path)
 
-    scoring_function = get_scoring_function(revealing_node_ids)
+    scoring_function = get_bugs_scoring_function(revealing_node_ids)
     points = generic_experiment_coverage(
         project_root,
         module_under_test_path,
-        scoring_function,
+        [scoring_function],
         coverage_boundaries_count=coverage_boundaries_count,
         max_trace_size=max_trace_size,
         coverage_metrics=coverage_metrics,
@@ -90,7 +81,7 @@ def run_real_bugs_experiment_fixed_coverage(
     return df, total_revealing_node_ids
 
 
-def get_scoring_function(revealing_node_ids):
+def get_bugs_scoring_function(revealing_node_ids):
     def sf(suite: SubTestSuite):
         return bugs_revealed(suite, revealing_node_ids)
 
@@ -98,7 +89,7 @@ def get_scoring_function(revealing_node_ids):
 
 
 def bugs_revealed(suite: SubTestSuite, revealing_node_ids: Set[str]):
-    used_reveling_node_ids = revealing_node_ids.intersection(set(suite.test_cases))
+    used_reveling_node_ids = set(revealing_node_ids).intersection(set(suite.test_cases))
     if len(revealing_node_ids) == 0:
         return 0.0
-    return len(used_reveling_node_ids)/len(revealing_node_ids)
+    return len(used_reveling_node_ids) / len(revealing_node_ids)

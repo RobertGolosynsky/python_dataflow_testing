@@ -40,7 +40,7 @@ metric_names = {
 
 def generic_experiment_size(
         project_root, module_under_test_path,
-        scoring_function,
+        scoring_functions,
         test_suite_sizes_count=30,
         test_suite_sizes=None,
         max_trace_size=10,
@@ -68,16 +68,16 @@ def generic_experiment_size(
     points = []
 
     for sub_test_suites_size in test_suite_sizes:
-        for coverage_metric in coverage_metrics:
-            logger.debug("Test suite size: {sub_test_suites_size}, metric: {coverage_metric}",
+        for metric in coverage_metrics:
+            logger.debug("Test suite size: {sub_test_suites_size}, metric: {metric}",
                          sub_test_suites_size=sub_test_suites_size,
-                         coverage_metric=coverage_metric)
-            if coverage_metric == RANDOM_STRATEGY:
+                         metric=metric)
+            if metric == RANDOM_STRATEGY:
                 suites = random_suites(node_ids, sub_test_suites_size, support)
             else:
                 suites = generator.fix_sized_suites(
                     module_under_test_path=module_under_test_path,
-                    coverage_metric=coverage_metric,
+                    coverage_metric=metric,
                     exact_size=sub_test_suites_size,
                     n=support,
                     check_unique_items_covered=False,
@@ -85,8 +85,8 @@ def generic_experiment_size(
                 )
 
             for suite in suites:
-                mutation_score = scoring_function(suite)
-                point = (sub_test_suites_size, metric_names[coverage_metric], mutation_score, suite.coverage)
+                scores = [scoring_function(suite) for scoring_function in scoring_functions]
+                point = (len(suite.test_cases), metric_names[metric], *scores, suite.coverage)
                 points.append(point)
     return points
 
@@ -94,7 +94,7 @@ def generic_experiment_size(
 def generic_experiment_coverage(
         project_root,
         module_under_test_path,
-        scoring_function,
+        scoring_functions,
         coverage_boundaries_count=20,
         max_trace_size=10,
         coverage_metrics=None,
@@ -106,7 +106,10 @@ def generic_experiment_coverage(
     if coverage_metrics is None:
         coverage_metrics = DEFAULT_METRICS
 
-    coverage_boundaries = np.linspace(0.05, 1.0, num=coverage_boundaries_count)
+    coverage_boundaries = zip(
+        np.linspace(0.0, 0.95, num=coverage_boundaries_count),
+        np.linspace(0.05, 1.0, num=coverage_boundaries_count)
+    )
 
     generator = SuiteGenerator(project_root, project_root, COMMON_EXCLUDE, max_trace_size=max_trace_size)
 
@@ -125,8 +128,8 @@ def generic_experiment_coverage(
             )
 
             for suite in suites:
-                mutation_score = scoring_function(suite)
-                point = (len(suite.test_cases), metric_names[metric], mutation_score, suite.coverage)
+                scores = [scoring_function(suite) for scoring_function in scoring_functions]
+                point = (len(suite.test_cases), metric_names[metric], *scores, suite.coverage)
                 points.append(point)
 
     return points

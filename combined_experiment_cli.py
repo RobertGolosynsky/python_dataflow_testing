@@ -8,13 +8,10 @@ from pathlib import Path
 
 from config import COMMON_EXCLUDE
 from coverage_metrics.coverage_metric_enum import CoverageMetric
+from experiment.core.columns import SUITE_SIZE, SUITE_COVERAGE_BIN, DataFrameType
+from experiment.core.combined_experiment import combined_experiment_fixed_size, combined_experiment_fixed_coverage
 from experiment.core.generic_experiment import image_path, df_path, module_path
-from experiment.core.mutation_experiment import run_mutation_experiment_fixed_size, MUTATION_SCORE, \
-    run_mutation_experiment_fixed_coverage
-from experiment.core.real_bugs_experiment import run_real_bugs_experiment_fixed_size, \
-    run_real_bugs_experiment_fixed_coverage, SUITE_SIZE, METRIC, BUG_REVEALED_SCORE, SUITE_COVERAGE_BIN
-from experiment.core.visualization import create_cat_plot_with_count
-from experiment.dataframe_type import DataFrameType
+from experiment.visualization.other import draw_vertically
 from tracing.trace_reader import TraceReader
 from util.misc import maybe_expand
 
@@ -46,6 +43,7 @@ if __name__ == "__main__":
     out_folder = maybe_expand(args.out)
 
     module = args.module
+    timeout = args.timeout
     revealing_node_ids = args.revealing_node_ids
 
     exclude_folders_tracing = COMMON_EXCLUDE
@@ -58,7 +56,6 @@ if __name__ == "__main__":
         deselect_tests=None
     )
 
-
     trace_reader = TraceReader(trace_root)
     failed_node_ids = trace_reader.read_failed_test_cases()
 
@@ -68,7 +65,8 @@ if __name__ == "__main__":
     new_module_path = module_path(out_folder, project_root, module)
     shutil.copy(module, new_module_path)
 
-    df_fixed_size, total_bugs = run_real_bugs_experiment_fixed_size(
+    # fixed size
+    df, total_mutants_count, total_bugs_count = combined_experiment_fixed_size(
         project_root=project_root,
         module_under_test_path=module,
         revealing_node_ids=revealing_node_ids,
@@ -76,75 +74,34 @@ if __name__ == "__main__":
         test_suite_sizes=test_suite_sizes,
         max_trace_size=max_trace_size,
         coverage_metrics=coverage_metrics,
-        support=support
+        support=support,
+        timeout=timeout
     )
 
-    df_p = df_path(out_folder, project_root, module, DataFrameType.BUGS_FIXED_SIZE.value)
-    df_fixed_size.to_csv(df_p)
+    df_p = df_path(out_folder, project_root, module, DataFrameType.FIXED_SIZE.value)
+    df.to_csv(df_p)
 
-    title = f"{Path(module).name}, {total_bugs} bugs"
+    title = f"{Path(module).name}, {total_mutants_count} mutants, {total_bugs_count} bugs"
 
-    image_p = image_path(out_folder, project_root, module, DataFrameType.BUGS_FIXED_SIZE.value)
-    create_cat_plot_with_count(df_fixed_size, title, image_p,
-                               x=SUITE_SIZE, y=BUG_REVEALED_SCORE, hue=METRIC,
-                               xlabel="Test suite size", ylabel="Bugs revealed", no_ordering=True)
-
-    df_fixed_coverage, total_bugs = run_real_bugs_experiment_fixed_coverage(
-        project_root=project_root,
-        module_under_test_path=module,
-        revealing_node_ids=revealing_node_ids,
-        coverage_boundaries_count=coverage_boundaries_count,
-        max_trace_size=max_trace_size,
-        coverage_metrics=coverage_metrics,
-        support=support
-    )
-
-    df_p = df_path(out_folder, project_root, module, DataFrameType.BUGS_FIXED_COVERAGE.value)
-    df_fixed_coverage.to_csv(df_p)
-
-    image_p = image_path(out_folder, project_root, module, DataFrameType.BUGS_FIXED_COVERAGE.value)
-    create_cat_plot_with_count(df_fixed_coverage, title, image_p,
-                               x=SUITE_COVERAGE_BIN, y=BUG_REVEALED_SCORE, hue=METRIC,
-                               xlabel="Test suite coverage (%)", ylabel="Bugs revealed")
-
-    # mutation experiment
-    df_fixed_size, total_mutants = run_mutation_experiment_fixed_size(
-        project_root=project_root,
-        module_under_test_path=module,
-        test_suite_sizes_count=None,
-        test_suite_sizes=test_suite_sizes,
-        max_trace_size=max_trace_size,
-        timeout=args.timeout,
-        coverage_metrics=coverage_metrics,
-        support=support
-    )
-    title = f"{Path(module).name}, {total_mutants} mutants"
-    df_p = df_path(out_folder, project_root, module, DataFrameType.MUTATION_FIXED_SIZE.value)
-    df_fixed_size.to_csv(df_p)
-
-    image_p = image_path(out_folder, project_root, module, DataFrameType.MUTATION_FIXED_SIZE.value)
-    create_cat_plot_with_count(df_fixed_size, title, image_p,
-                               x=SUITE_SIZE, y=MUTATION_SCORE, hue=METRIC,
-                               xlabel="Test suite size", ylabel="Mutants killed (%)", no_ordering=True)
+    image_p = image_path(out_folder, project_root, module, DataFrameType.FIXED_SIZE.value)
+    draw_vertically(df, SUITE_SIZE, image_p, title=title)
 
     # fixed coverage
-
-    df_fixed_coverage, total_mutants = run_mutation_experiment_fixed_coverage(
+    df, total_mutants_count, total_bugs_count = combined_experiment_fixed_coverage(
         project_root=project_root,
         module_under_test_path=module,
+        revealing_node_ids=revealing_node_ids,
         coverage_boundaries_count=coverage_boundaries_count,
         max_trace_size=max_trace_size,
-        timeout=args.timeout,
         coverage_metrics=coverage_metrics,
-        support=support
+        support=support,
+        timeout=timeout
     )
-    df_p = df_path(out_folder, project_root, module, DataFrameType.MUTATION_FIXED_COVERAGE.value)
-    df_fixed_coverage.to_csv(df_p)
 
-    title = f"{Path(module).name}, {total_mutants} mutants"
-    image_p = image_path(out_folder, project_root, module, DataFrameType.MUTATION_FIXED_COVERAGE.value)
-    create_cat_plot_with_count(df_fixed_coverage, title, image_p,
-                               x=SUITE_COVERAGE_BIN, y=MUTATION_SCORE, hue=METRIC,
-                               xlabel="Test suite coverage", ylabel="Mutants killed (%)")
+    df_p = df_path(out_folder, project_root, module, DataFrameType.FIXED_COVERAGE.value)
+    df.to_csv(df_p)
+
+    image_p = image_path(out_folder, project_root, module, DataFrameType.FIXED_COVERAGE.value)
+    draw_vertically(df, SUITE_COVERAGE_BIN, image_p, title=title)
 
     exit(0)

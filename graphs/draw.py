@@ -1,8 +1,7 @@
 import inspect
-import os
 import subprocess
 from collections import defaultdict
-from tempfile import TemporaryFile, mkstemp
+from tempfile import mkstemp
 
 from networkx.drawing.nx_agraph import graphviz_layout
 import matplotlib.pyplot as plt
@@ -18,55 +17,6 @@ def draw_byte_cfg(g):
     pos = graphviz_layout(g, prog='dot')
     nx.draw_networkx(g, pos, node_size=150, node_color="#ccddff", node_shape="s")
     plt.show()
-
-
-def draw_with_code(g, pairs, func, control_edge_color="black", flow_edge_color="green", file=None):
-    cfg = g.copy()  # nx.MultiDiGraph()
-    # cfg.add_nodes_from(g)
-    # cfg.add_edges_from(g.edges)
-
-    for e in cfg.edges:
-        edge_data = cfg.edges[e]
-        if "color" not in edge_data:
-            edge_data["color"] = control_edge_color
-        # cfg.edges[e]["color"] = control_edge_color
-        # cfg.edges[e]["label"] = ""
-
-    code, start_line = inspect.getsourcelines(func)
-    code = [line[:-1] for line in code]
-
-    for i, p in enumerate(pairs):
-        def_node, data = gu.node_where(cfg, gc.LINE_KEY, p.definition.line)
-        use_node, data = gu.node_where(cfg, gc.LINE_KEY, p.use.line)
-        cfg.add_edge(use_node, def_node, label=p.use.varname, color=flow_edge_color)
-
-    mapping = {}
-    for node in cfg.nodes:
-        attrs = cfg.nodes[node]
-        line = attrs.get(gc.LINE_KEY, None)
-        inst_g = attrs.get(gc.INSTRUCTIONS_KEY, None)
-        instrs_range = None
-        if inst_g:
-            codes = [d.get(gc.INSTRUCTION_KEY, None) for n, d in inst_g.nodes(data=True)]
-            codes = [c.offset for c in codes if c]
-            mn = min(codes)
-            mx = max(codes)
-            instrs_range = "%i-%i" % (mn, mx)
-        if line:
-            code_line = code[line - start_line]
-            new_label = str(line) + ": " + code_line.strip().replace("\\", "\\\\")
-            if instrs_range:
-                new_label += " @ " + instrs_range
-            mapping[node] = new_label
-
-    cfg = nx.relabel_nodes(cfg, mapping)
-    dot = nx.nx_agraph.to_agraph(cfg)
-    if file:
-        dot.draw(file, prog='dot')
-    else:
-        _, temp_file = mkstemp(suffix=".png", prefix="cfg_")
-        dot.draw(temp_file, prog='dot')
-        subprocess.run(["xdg-open", temp_file])
 
 
 def draw_byte_cfg_dot(g, pairs, func,
@@ -107,7 +57,7 @@ def draw_byte_cfg_dot(g, pairs, func,
 
     # cfg = nx.relabel_nodes(cfg, mapping)
     node_lines = {node: str(data.get(LINE_KEY)) for node, data in cfg.nodes(data=True)}
-    cfg = nx.relabel_nodes(cfg, {node: node+"@ln"+node_lines[node] + ":" +
+    cfg = nx.relabel_nodes(cfg, {node: node + "@ln" + node_lines[node] + ":" +
                                        cfg.nodes[node].get(gc.INSTRUCTION_KEY, None).opname + " " +
                                        str(cfg.nodes[node].get(gc.INSTRUCTION_KEY, None).argval)
     if gc.INSTRUCTION_KEY in cfg.nodes[node] else node + ":" + "None"
@@ -182,7 +132,7 @@ def dump(line_cfg, source_start, source_lines, attr_keys=None):
         print(line_num, l[:-1].split("#")[0], "#", s)
 
 
-def source_w_pairs(source_file, pairs, trace=[]):
+def source_w_pairs(source_file, pairs, trace=()):
     hit_lines = set(trace)
     pair_suffs = defaultdict(list)
     c = 0

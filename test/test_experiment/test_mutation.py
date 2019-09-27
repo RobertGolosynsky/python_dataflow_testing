@@ -1,42 +1,23 @@
 import unittest
 from pathlib import Path
 
-from experiment.mutation import killed_mutants
+from experiment.core.mutation import killed_mutants
+from tracing.trace_reader import TraceReader
 
 
 class TestMutation(unittest.TestCase):
 
     def test_mutate_linked_list_module(self):
-        root = Path(__file__).parent.parent.parent / "dataset/linked_list_clean"
-        module_under_test = root / "core" / "ll.py"
+        project_root = Path(__file__).parent.parent.parent / "dataset/linked_list_clean"
+        module_under_test_path = project_root / "core" / "ll.py"
 
-        cases = """
-tests/test_list.py::LinkedListTest::test_append_on_removed
-tests/test_list.py::LinkedListTest::test_append_when_empty
-tests/test_list.py::LinkedListTest::test_append_when_not_empty
-tests/test_list.py::LinkedListTest::test_as_list
-tests/test_list.py::LinkedListTest::test_as_list_on_empty
-tests/test_list.py::LinkedListTest::test_create_from_list
-tests/test_list.py::LinkedListTest::test_get
-tests/test_list.py::LinkedListTest::test_get_empty
-tests/test_list.py::LinkedListTest::test_get_middle
-tests/test_list.py::LinkedListTest::test_get_out_bounds
-tests/test_list.py::LinkedListTest::test_len
-tests/test_list.py::LinkedListTest::test_len_large_list
-tests/test_list.py::LinkedListTest::test_len_on_empty
-tests/test_list.py::LinkedListTest::test_remove_first_append
-tests/test_list.py::LinkedListTest::test_remove_first_as_list
-tests/test_list.py::LinkedListTest::test_remove_middle
-tests/test_list.py::LinkedListTest::test_remove_twice_when_not_empty
-tests/test_list.py::LinkedListTest::test_remove_when_empty
-tests/test_list.py::LinkedListTest::test_remove_when_not_empty
-tests/test_node.py::TestNode::test_create
-"""
+        trace_reader = TraceReader(project_root)
+        not_failing_node_ids = trace_reader.get_not_failing_node_ids(module_under_test_path)
 
         killed, total = killed_mutants(
-            project_root=str(root),
-            path_to_module_under_test=str(module_under_test),
-            test_cases_ids=cases.split(),
+            project_root=str(project_root),
+            module_under_test_path=str(module_under_test_path),
+            not_failing_node_ids=not_failing_node_ids,
             timeout=None
         )
         s = set()

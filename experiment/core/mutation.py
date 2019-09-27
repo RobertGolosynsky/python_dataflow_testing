@@ -18,30 +18,38 @@ from mutmut.cache import update_line_numbers, hash_of_tests
 
 from tqdm import tqdm
 
+from tracing.trace_reader import TraceReader
+from util.cache import cache
+
 cache_location = Path("/tmp/thorough/.cached_mutants").resolve()
+cache_location_2 = Path("/tmp/thorough/.cached_mutants_mine").resolve()
 memory = Memory(location=cache_location, verbose=10000)
 
 
 def killed_mutants(
-        path_to_module_under_test,
-        test_cases_ids,
+        module_under_test_path,
         project_root,
+        not_failing_node_ids,
         timeout=None
 ):
-    rel_path = Path(path_to_module_under_test).relative_to(project_root)
-    nodes_joined = "".join(sorted(test_cases_ids))
-    key = f"{rel_path} {nodes_joined}"
-    return killed_mutants_raw(path_to_module_under_test, test_cases_ids,
-                              project_root,
+    rel_path = Path(module_under_test_path).relative_to(project_root)
+    key = f"{rel_path}"
+    return killed_mutants_raw(module_under_test_path, project_root,
+                              not_failing_node_ids,
                               timeout=timeout, cache_key=key)
 
 
-@memory.cache(ignore=["path_to_module_under_test", "test_cases_ids", "project_root", "timeout"],
-              verbose=100000)
+# @memory.cache(ignore=["path_to_module_under_test", "test_cases_ids", "project_root", "timeout"],
+#               verbose=100000)
+def key(cache_key):
+    return hashlib.sha1(cache_key.encode("utf-8")).hexdigest()
+
+
+@cache(key=key, arg_names=["cache_key"], location=str(cache_location_2), version=2)
 def killed_mutants_raw(
-        path_to_module_under_test,
-        test_cases_ids,
+        module_under_test_path,
         project_root,
+        not_failing_node_ids,
         timeout=None,
         cache_key=None
 ):
@@ -59,8 +67,10 @@ def killed_mutants_raw(
 
     os.environ['PYTHONDONTWRITEBYTECODE'] = '1'  # stop python from creating .pyc files
 
+
+
     pytest_args = []
-    pytest_args += test_cases_ids
+    pytest_args += not_failing_node_ids
 
     baseline_time_elapsed = time_test_suite(
         swallow_output=not swallow_output,
@@ -69,7 +79,7 @@ def killed_mutants_raw(
         using_testmon=False
     )
 
-    mutations: List[MutationID] = get_mutants_of(path_to_module_under_test)
+    mutations: List[MutationID] = get_mutants_of(module_under_test_path)
 
     total = len(mutations)
 
@@ -103,7 +113,7 @@ def killed_mutants_raw(
 
         context = Context(
             mutation_id=mutation_id,
-            filename=path_to_module_under_test,
+            filename=module_under_test_path,
             dict_synonyms=config.dict_synonyms,
             config=config,
         )
@@ -138,7 +148,7 @@ def killed_mutants_raw(
         except Exception:
             raise
         finally:
-            move(path_to_module_under_test + '.bak', path_to_module_under_test)
+            move(module_under_test_path + '.bak', module_under_test_path)
             os.chdir(save_working_dir)
 
     return killed, total
