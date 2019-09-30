@@ -18,9 +18,9 @@ combined_experiment_cli_path = combined_experiment_cli.__file__
 
 if __name__ == "__main__":
 
-    lim = 1000
+    lim = 999
     off = 0
-    flag = "all"
+    flag = "ungrouped"
     graphs_path = results_root / "graphs_cumulative_off_{}_lim_{}{}".format(off, lim, flag)
     general_graphs = graphs_path / "graphs"
     os.makedirs(graphs_path, exist_ok=True)
@@ -44,9 +44,9 @@ if __name__ == "__main__":
     DATABASE_PROXY.initialize(db)
     # .where(Module.total_cases < 100) \
     #     .where(Module.bugs < 8) \
+    #.group_by(Repo.name) \
     ms: List[Module] = Module.select() \
         .join(Repo) \
-        .group_by(Repo.name) \
         .order_by(Module.total_cases.desc()) \
         .offset(off) \
         .limit(lim)

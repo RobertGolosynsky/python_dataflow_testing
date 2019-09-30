@@ -56,6 +56,5 @@ def create_cat_plot_with_count(df, title, filename,
     plt.title(title)
 
     fig.savefig(filename)
-    plt.close()
-
+    plt.close(fig)
 

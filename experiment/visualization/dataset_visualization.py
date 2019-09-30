@@ -28,14 +28,17 @@ def visualize_dataset(ms, plots_location):
         .set_title("Coverage")
 
     plt.savefig(os.path.join(plots_location, "coverage.png"))
+    plt.close(fig)
 
     fig, ax = plt.subplots(1, 1, figsize=(16, 8))
     plot_type(data=df.loc[:, ["Intramethod pairs", "Intermethod pairs", "Interclass pairs"]], palette="husl", ax=ax) \
         .set_title("Pairs detailed")
     plt.savefig(os.path.join(plots_location, "pairs.png"))
+    plt.close(fig)
 
     fig, ax = plt.subplots(1, 2, figsize=(16, 8))
     fig.suptitle("Mutants and bugs")
     plot_type(data=df.loc[:, ["Mutants"]], palette="husl", ax=ax[0])
     plot_type(data=df.loc[:, ["Bugs"]], palette="husl", ax=ax[1])
     plt.savefig(os.path.join(plots_location, "mutants_bugs.png"))
+    plt.close(fig)

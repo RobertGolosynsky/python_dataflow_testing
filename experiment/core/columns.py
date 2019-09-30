@@ -1,5 +1,7 @@
 from enum import Enum
 
+# from coverage_metrics.coverage_metric_enum import CoverageMetric
+
 
 class DataFrameType(Enum):
     FIXED_SIZE = "FIXED_SIZE"

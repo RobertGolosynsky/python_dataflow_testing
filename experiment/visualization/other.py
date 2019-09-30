@@ -17,6 +17,16 @@ def all_data_frames_of_type(path: Path, df_type: DataFrameType):
     return dfs
 
 
+def read_combined_df(root: Path, repo_id: str, df_type: DataFrameType):
+    for file in root.iterdir():
+        if file.is_file() \
+                and file.suffix == ".csv" \
+                and file.stem.endswith(df_type.value) \
+                and repo_id in file.name:
+            return load_combined_data_df(file)
+    return None
+
+
 def cov_bin_key(a_bin):
     return int(a_bin[1:-1].split("-")[0])
 
@@ -46,10 +56,14 @@ def draw_vertically(df, sharedx, image_file, dodge=0.5, title=None):
     draw_plots_vertically(image_file, sharedx=sharedx, hue=METRIC, plots=plots, title=title)
 
 
+def load_combined_data_df(path: Path):
+    return pd.read_csv(filepath_or_buffer=path, index_col=0)
+
+
 def load_data_frames(list_files):
     dfs = []
     for file in list_files:
-        df = pd.read_csv(filepath_or_buffer=file, index_col=0)
+        df = load_combined_data_df(file)
         dfs.append(df)
     return dfs
 
@@ -78,7 +92,7 @@ def draw_plots_vertically(fname, sharedx, hue, plots: List[Plot], title=None):
     if title:
         fig.suptitle(title)
     fig.savefig(fname)
-
+    plt.close(fig)
 
 def normalize(df):
     return (df - df.min()) / (df.max() - df.min())

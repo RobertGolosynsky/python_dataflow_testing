@@ -7,13 +7,13 @@ import pandas as pd
 from loguru import logger
 
 from config import COMMON_EXCLUDE
-from coverage_metrics.coverage_metric_enum import CoverageMetric
+from coverage_metrics.coverage_metric_enum import CoverageMetric, RANDOM_STRATEGY
 from experiment.suites.collect_test_suite import random_suites
 from experiment.suites.suite_generator import SuiteGenerator
 from model.cfg.project_cfg import ProjectCFG
 from tracing.trace_reader import TraceReader
 
-RANDOM_STRATEGY = 1337
+
 DEFAULT_METRICS = (
     # CoverageMetric.STATEMENT,
     CoverageMetric.BRANCH,
@@ -25,17 +25,6 @@ DEFAULT_METRICS = (
     CoverageMetric.ALL_PAIRS,
     # RANDOM_STRATEGY
 )
-metric_names = {
-    CoverageMetric.STATEMENT: "Statement",
-    CoverageMetric.BRANCH: "Branch",
-    CoverageMetric.M_ONLY: "Only intramethod",
-    CoverageMetric.IC_ONLY: "Only interclass",
-    CoverageMetric.IM_ONLY: "Only intermethod",
-    CoverageMetric.M_AND_IC: "Intramethod and interclass",
-    CoverageMetric.M_AND_IM: "Intramethod and intermethod",
-    CoverageMetric.ALL_PAIRS: "All pairs",
-    RANDOM_STRATEGY: "Random"
-}
 
 
 def generic_experiment_size(
@@ -86,7 +75,7 @@ def generic_experiment_size(
 
             for suite in suites:
                 scores = [scoring_function(suite) for scoring_function in scoring_functions]
-                point = (len(suite.test_cases), metric_names[metric], *scores, suite.coverage)
+                point = (len(suite.test_cases), str(metric), *scores, suite.coverage)
                 points.append(point)
     return points
 
@@ -129,7 +118,7 @@ def generic_experiment_coverage(
 
             for suite in suites:
                 scores = [scoring_function(suite) for scoring_function in scoring_functions]
-                point = (len(suite.test_cases), metric_names[metric], *scores, suite.coverage)
+                point = (len(suite.test_cases), str(metric), *scores, suite.coverage)
                 points.append(point)
 
     return points

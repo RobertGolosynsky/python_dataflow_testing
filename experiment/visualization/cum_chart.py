@@ -22,15 +22,8 @@ def draw_biased(df_root, out_folder):
 
 def draw_grouped(df_root, out_folder):
     # size
-    dfs = read_data_frames_of_type(df_root, DataFrameType.FIXED_SIZE)
-    size_dfs = []
-    for df in dfs:
-        try:
-            size_dfs.append(df.groupby([SUITE_SIZE, METRIC], as_index=False).mean())
-        except:
-            with pd.option_context('display.max_rows', None, 'display.max_columns',
-                                   None):  # more options can be specified also
-                print(df)
+    size_dfs = read_data_frames_of_type(df_root, DataFrameType.FIXED_SIZE)
+    size_dfs = [df.groupby([SUITE_SIZE, METRIC], as_index=False).mean() for df in size_dfs]
     size_dfs = pd.concat(size_dfs, axis=0, ignore_index=True, sort=False)
 
     image_file = out_folder / "fixed_size_grouped.png"
