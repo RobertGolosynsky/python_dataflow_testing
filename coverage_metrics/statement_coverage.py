@@ -1,6 +1,7 @@
 import pandas as pd
 
 from coverage_metrics.coverage_interface import Coverage
+from coverage_metrics.coverage_metric_enum import CoverageMetric
 from coverage_metrics.util import percent
 from graphs.keys import LINE_KEY
 from model.cfg.project_cfg import ProjectCFG
@@ -11,11 +12,13 @@ from loguru import logger
 
 
 class StatementCoverage(Coverage):
+    metrics = {CoverageMetric.STATEMENT}
     file_name_col = "Fname"
     file_path_col = "Fpath"
     coverage_col = "StCov"
 
-    def __init__(self, trace_root, project_root, exclude_folders=None, max_trace_size=None, use_cached_if_possible=True):
+    def __init__(self, trace_root, project_root, exclude_folders=None, max_trace_size=None,
+                 use_cached_if_possible=True):
         self.max_trace_size = max_trace_size
         self.project_cfg = ProjectCFG.create_from_path(project_root, exclude_folders=exclude_folders,
                                                        use_cached_if_possible=use_cached_if_possible)

@@ -8,8 +8,9 @@ from loguru import logger
 
 class Function:
 
-    def __init__(self, func, first_line, argument_names):
+    def __init__(self, func, tree, first_line, argument_names):
         self.func = func
+        self.tree = tree
         self.first_line = first_line
         self.argument_names = argument_names
         self.end_line = None
@@ -20,7 +21,8 @@ class Function:
         line = function_def.lineno
         args = _get_function_arg_names(function_def)
         fn_name = function_def.name
-        fake_module = ast.Module([_clean_function_node(function_def)])
+        function_def = _clean_function_node(function_def)
+        fake_module = ast.Module([function_def])
         namespace = {}
         fake_module_code = compile(fake_module, "", mode="exec")
         try:
@@ -29,7 +31,12 @@ class Function:
             logger.error(traceback.format_exc(e))
             logger.error("Ast dump of function: {d}", d=ast.dump(function_def))
             # TODO: fix this error
-        function = Function(namespace[fn_name], line, args)
+        function = Function(
+            func=namespace[fn_name],
+            tree=function_def,
+            first_line=line,
+            argument_names=args
+        )
         if first_lines:
             function.add_end_line(first_lines)
         return function

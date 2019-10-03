@@ -1,3 +1,5 @@
+from typing import Generator, Tuple
+
 from model.cfg.class_cfg import ClassCFG, only_lines
 from model.cfg.function_cfg import FunctionCFG
 import util.astroid_util as au
@@ -35,6 +37,7 @@ class ModuleCFG(object):
         self.intramethod_pairs = self._calculate_intra_method()
         self.intermethod_pairs = self._calculate_intermethod()
         self.interclass_pairs = self._calculate_interclass()
+        self.c_uses, self.p_uses = self._calculate_all_c_all_p_uses()
 
         logger.debug("Finding branching points of the module")
         from coverage_metrics.branch_coverage import find_branches
@@ -66,6 +69,15 @@ class ModuleCFG(object):
             total_intramethod_pairs.update(only_lines(function_cfg.pairs))
         return total_intramethod_pairs
 
+    def _calculate_all_c_all_p_uses(self):
+        all_c = set()
+        all_p = set()
+        for name, function in self.walk():
+            all_c |= function.c_uses
+            all_p |= function.p_uses
+
+        return all_p, all_p
+
     def get_variables(self, line):
 
         for func_cfg in self.function_cfgs:
@@ -79,7 +91,7 @@ class ModuleCFG(object):
                 return variables
         return None
 
-    def walk(self):
+    def walk(self) -> Generator[Tuple[str, FunctionCFG], None, None]:
         for fname, cfg in self.function_cfgs.items():
             yield fname, cfg
         for cls_cfg in self.class_cfgs.values():

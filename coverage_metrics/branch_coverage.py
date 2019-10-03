@@ -4,6 +4,7 @@ from typing import Set
 
 from loguru import logger
 
+from coverage_metrics.coverage_metric_enum import CoverageMetric
 from coverage_metrics.statement_coverage import StatementCoverage
 from coverage_metrics.util import percent
 import pandas as pd
@@ -49,6 +50,7 @@ def find_covered_branches(df: pd.DataFrame, branches) -> Set:
 
 
 class BranchCoverage(StatementCoverage):
+    metrics = {CoverageMetric.BRANCH}
     column_name = "BrCov"
 
     def __init__(self, trace_root, project_root, exclude_folders=None, max_trace_size=None,

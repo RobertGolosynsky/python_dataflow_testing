@@ -5,6 +5,10 @@ from coverage_metrics.util import percent
 
 
 class Coverage(abc.ABC):
+    metrics = set()
+
+    def reports_metric(self, metric):
+        return metric in self.metrics
 
     def total_items_of(self, module_path, of_type=None):
         raise NotImplementedError("Implement this")

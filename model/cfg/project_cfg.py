@@ -12,7 +12,7 @@ import json
 
 
 class ProjectCFG:
-    __version__ = 1
+    __version__ = 2
     cfg_folder = ".flow_graph"
     tag_file = "version.hash"
     cfg_file = "project.flow"

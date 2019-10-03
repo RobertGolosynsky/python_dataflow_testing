@@ -1,6 +1,5 @@
 from enum import Enum
 
-RANDOM_STRATEGY = "Random"
 
 
 class CoverageMetric(Enum):
@@ -16,6 +15,9 @@ class CoverageMetric(Enum):
     IM_AND_IC = "Intermethod and interclass"
 
     ALL_PAIRS = "All pairs"
+
+    ALL_C_USES = "All computational uses"
+    ALL_P_USES = "All predicate uses"
 
     def __str__(self):
         return self._value_
@@ -34,5 +36,4 @@ class CoverageMetric(Enum):
 #     CoverageMetric.M_AND_IM: "Intramethod and intermethod",
 #     CoverageMetric.IM_AND_IC: "Intermethod and interclass",
 #     CoverageMetric.ALL_PAIRS: "All pairs",
-#     RANDOM_STRATEGY: "Random"
 # }

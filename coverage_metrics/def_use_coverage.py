@@ -19,6 +19,10 @@ row = namedtuple("row", ["test_case", "module_under_test",
 
 
 class DefUsePairsCoverage(Coverage):
+    metrics = {CoverageMetric.ALL_PAIRS, CoverageMetric.M_ONLY,
+               CoverageMetric.IC_ONLY, CoverageMetric.IM_ONLY,
+               CoverageMetric.M_AND_IM, CoverageMetric.M_AND_IC,
+               CoverageMetric.IM_AND_IC, CoverageMetric.ALL_PAIRS}
     file_name_col = "File name"
     file_path_col = "File path"
     coverage_col = "Coverage"

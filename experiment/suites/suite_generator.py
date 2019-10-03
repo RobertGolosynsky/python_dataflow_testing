@@ -2,7 +2,9 @@ from pathlib import Path
 from typing import List
 
 from joblib import Memory
+from loguru import logger
 
+from coverage_metrics.all_c_all_p_uses_coverage import AllCAllPUses
 from coverage_metrics.branch_coverage import BranchCoverage
 from coverage_metrics.coverage_metric_enum import CoverageMetric
 from coverage_metrics.def_use_coverage import DefUsePairsCoverage
@@ -12,35 +14,40 @@ from experiment.suites.collect_test_suite import SubTestSuite, generate_test_sui
 
 
 class SuiteGenerator:
+    __version__ = 1
 
     def __init__(self, trace_root, project_root,
                  exclude_folders=None,
                  max_trace_size=None):
-        self.stcov = StatementCoverage(trace_root, project_root,
-                                       exclude_folders=exclude_folders,
-                                       max_trace_size=max_trace_size)
-        self.brcov = BranchCoverage(trace_root, project_root,
+
+        stcov = StatementCoverage(trace_root, project_root,
+                                  exclude_folders=exclude_folders,
+                                  max_trace_size=max_trace_size)
+        brcov = BranchCoverage(trace_root, project_root,
+                               exclude_folders=exclude_folders,
+                               max_trace_size=max_trace_size)
+        ducov = DefUsePairsCoverage(trace_root, project_root,
                                     exclude_folders=exclude_folders,
                                     max_trace_size=max_trace_size)
-        self.ducov = DefUsePairsCoverage(trace_root, project_root,
-                                         exclude_folders=exclude_folders,
-                                         max_trace_size=max_trace_size)
-        cache_path = "/tmp/thorough/.cached_coverage"
-        # self.memory = Memory(location=Path(trace_root) / ".coverage_cache", verbose=0)
+        cpcov = AllCAllPUses(trace_root, project_root,
+                             exclude_folders=exclude_folders,
+                             max_trace_size=max_trace_size)
+        self.metrics = [stcov, brcov, ducov, cpcov]
+        cache_path = f"/tmp/thorough/.cached_coverage_{self.__version__}"
         self.memory = Memory(location=cache_path, verbose=0)
         self.cached_get_total_items = self.memory.cache(_get_total_items, ignore=["cov"])
 
     def _get_total_items(self, coverage_metric, module_under_test_path, test_cases):
-        if coverage_metric == CoverageMetric.STATEMENT:
-            cov = self.stcov
-        elif coverage_metric == CoverageMetric.BRANCH:
-            cov = self.brcov
+        cov = None
+        for metric in self.metrics:
+            if metric.reports_metric(coverage_metric):
+                cov = metric
+                break
         else:
-            cov = self.ducov
-        if test_cases is not None and not isinstance(test_cases, frozenset):
+            logger.error("Cannot find reporter for coverage metric {m}", m=coverage_metric)
+        if test_cases is not None:
             test_cases = frozenset(test_cases)
         return self.cached_get_total_items(cov, coverage_metric, module_under_test_path, test_cases)
-        # return _get_total_items(cov, coverage_metric, module_under_test_path, test_cases)
 
     def fix_sized_suites(self,
                          module_under_test_path: str,
