@@ -20,7 +20,6 @@ class SubTestSuite:
         return self.test_cases == other.test_cases
 
 
-# TODO: fix this
 def generate_test_suites_fixed_size(data,
                                     n,
                                     total_coverage_items: set,

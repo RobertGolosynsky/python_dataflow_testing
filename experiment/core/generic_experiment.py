@@ -7,12 +7,11 @@ import pandas as pd
 from loguru import logger
 
 from config import COMMON_EXCLUDE
-from coverage_metrics.coverage_metric_enum import CoverageMetric, RANDOM_STRATEGY
+from coverage_metrics.coverage_metric_enum import CoverageMetric
 from experiment.suites.collect_test_suite import random_suites
 from experiment.suites.suite_generator import SuiteGenerator
 from model.cfg.project_cfg import ProjectCFG
 from tracing.trace_reader import TraceReader
-
 
 DEFAULT_METRICS = (
     # CoverageMetric.STATEMENT,
@@ -23,7 +22,6 @@ DEFAULT_METRICS = (
     # CoverageMetric.M_AND_IC,
     # CoverageMetric.M_AND_IM,
     CoverageMetric.ALL_PAIRS,
-    # RANDOM_STRATEGY
 )
 
 
@@ -55,23 +53,28 @@ def generic_experiment_size(
     logger.debug("Testing test suites of sizes {ss}", ss=test_suite_sizes)
     generator = SuiteGenerator(project_root, project_root, COMMON_EXCLUDE, max_trace_size=max_trace_size)
     points = []
-
-    for sub_test_suites_size in test_suite_sizes:
-        for metric in coverage_metrics:
+    no_suites_created_count_max = 3
+    for metric in coverage_metrics:
+        no_suites_created_count = 0
+        for sub_test_suites_size in test_suite_sizes:
             logger.debug("Test suite size: {sub_test_suites_size}, metric: {metric}",
                          sub_test_suites_size=sub_test_suites_size,
                          metric=metric)
-            if metric == RANDOM_STRATEGY:
-                suites = random_suites(node_ids, sub_test_suites_size, support)
+
+            suites = generator.fix_sized_suites(
+                module_under_test_path=module_under_test_path,
+                coverage_metric=metric,
+                exact_size=sub_test_suites_size,
+                n=support,
+                check_unique_items_covered=False,
+                test_cases=node_ids
+            )
+            if not suites:
+                no_suites_created_count += 1
             else:
-                suites = generator.fix_sized_suites(
-                    module_under_test_path=module_under_test_path,
-                    coverage_metric=metric,
-                    exact_size=sub_test_suites_size,
-                    n=support,
-                    check_unique_items_covered=False,
-                    test_cases=node_ids
-                )
+                no_suites_created_count = 0
+            if no_suites_created_count > no_suites_created_count_max:
+                break
 
             for suite in suites:
                 scores = [scoring_function(suite) for scoring_function in scoring_functions]
@@ -103,8 +106,8 @@ def generic_experiment_coverage(
     generator = SuiteGenerator(project_root, project_root, COMMON_EXCLUDE, max_trace_size=max_trace_size)
 
     points = []
-    for boundary in coverage_boundaries:
-        for metric in coverage_metrics:
+    for metric in coverage_metrics:
+        for boundary in coverage_boundaries:
             logger.debug("Coverage boundary: {boundary}, metric: {coverage_metric}", boundary=boundary,
                          coverage_metric=metric)
             suites = generator.fix_coverage_suites(
@@ -115,6 +118,8 @@ def generic_experiment_coverage(
                 check_unique_items_covered=False,
                 test_cases=node_ids
             )
+            # if not suites:
+            #     break
 
             for suite in suites:
                 scores = [scoring_function(suite) for scoring_function in scoring_functions]
