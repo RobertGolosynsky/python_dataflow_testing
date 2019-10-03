@@ -2,15 +2,11 @@ import contextlib
 import hashlib
 import time
 import os
-import sys
-import importlib
-import traceback
 from collections import defaultdict
 from pathlib import Path
 from shutil import move
 from typing import List
 
-from joblib import Memory
 from loguru import logger
 from mutmut import MutationID, Context
 from mutmut.__main__ import time_test_suite, add_mutations_by_file, Config, mutate_file, tests_pass_expanded
@@ -18,12 +14,9 @@ from mutmut.cache import update_line_numbers, hash_of_tests
 
 from tqdm import tqdm
 
-from tracing.trace_reader import TraceReader
 from util.cache import cache
 
 cache_location = Path("/tmp/thorough/.cached_mutants").resolve()
-cache_location_2 = Path("/tmp/thorough/.cached_mutants_mine").resolve()
-memory = Memory(location=cache_location, verbose=10000)
 
 
 def killed_mutants(
@@ -33,7 +26,8 @@ def killed_mutants(
         timeout=None
 ):
     rel_path = Path(module_under_test_path).relative_to(project_root)
-    key = f"{rel_path}"
+    project_name = os.path.basename(project_root)
+    key = f"{rel_path} {project_name}"
     return killed_mutants_raw(module_under_test_path, project_root,
                               not_failing_node_ids,
                               timeout=timeout, cache_key=key)
@@ -45,7 +39,7 @@ def key(cache_key):
     return hashlib.sha1(cache_key.encode("utf-8")).hexdigest()
 
 
-@cache(key=key, arg_names=["cache_key"], location=str(cache_location_2), version=2)
+@cache(key=key, arg_names=["cache_key"], location=str(cache_location), version=2)
 def killed_mutants_raw(
         module_under_test_path,
         project_root,
