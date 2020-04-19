@@ -30,6 +30,7 @@ class Tracer(object):
     trace_folder = ".traces"
 
     def __init__(self, keep, exclude, trace_folder_parent="./"):
+        self.stopped = True
 
         self.trace_folder = os.path.join(trace_folder_parent, self.trace_folder)
 
@@ -119,8 +120,10 @@ class Tracer(object):
         self.current_scope_files = {}
         self.last_index = defaultdict(int)
         sys.settrace(self._tracefunc)
+        self.stopped = False
 
     def stop(self):
+        self.stopped = True
         sys.settrace(None)
         logger.debug("Tracer stopped with trace name {trace_name}", trace_name=self.current_trace_name)
         [f.close() for f in self.current_log_files.values()]
@@ -146,6 +149,8 @@ class Tracer(object):
         logger.debug("Tracer closed, file index saved to {p}", p=self._trace_index_path())
 
     def _tracefunc(self, frame, event, _):
+        if self.stopped:
+            return
         file_path = frame.f_code.co_filename
         if self.fileNameHelper.should_include(file_path):
             line = frame.f_lineno

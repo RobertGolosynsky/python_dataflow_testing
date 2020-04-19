@@ -1,3 +1,4 @@
+import os
 import shutil
 
 import thorough
@@ -17,6 +18,7 @@ from util.misc import maybe_expand
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Real project experiment')
+    parser.add_argument('--working_dir', type=str, help='Working directory for the script, typically project under experiment root')
     parser.add_argument('--module', type=str, help='Module under test path')
     parser.add_argument('--timeout', type=str, help='Mutation testing timeout')
 
@@ -34,6 +36,11 @@ if __name__ == "__main__":
     args, unknown = parser.parse_known_args()
 
     project_root = maybe_expand("")
+    if args.working_dir:
+        project_root = maybe_expand(args.working_dir)
+
+    os.chdir(project_root)
+
     trace_root = project_root
     support = args.support
     test_suite_sizes = args.test_suite_sizes
@@ -61,6 +68,7 @@ if __name__ == "__main__":
 
     module = maybe_expand(module)
     coverage_metrics = (CoverageMetric.STATEMENT, CoverageMetric.BRANCH, CoverageMetric.ALL_PAIRS)
+    # coverage_metrics = (CoverageMetric.ALL_PAIRS, CoverageMetric.ALL_C_USES, CoverageMetric.ALL_P_USES)
 
     new_module_path = module_path(out_folder, project_root, module)
     shutil.copy(module, new_module_path)

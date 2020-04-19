@@ -24,6 +24,13 @@ from pytest_failed_node_ids import EXCEPTIONS_FILE
 import thorough
 from tracing.trace_reader import TraceReader
 
+STATUS_NO_REVEALING_NODE_IDS = "no_revealing_node_ids"
+STATUS_DYNAMIC_NODE_IDS = "not_constant_node_ids"
+STATUS_GOOD = "good"
+STATUS_NO_MODULE_CFG = "no_module_cfg"
+STATUS_NO_FAILED_ON_ASSERTION = "no_failed_on_assertion"
+STATUS_BAD = "bad"
+
 thorough_path = thorough.__file__
 
 if __name__ == "__main__":
@@ -43,6 +50,8 @@ if __name__ == "__main__":
     repo_managers = get_projects_bugs(
         "pydefects.db",
     )
+    silent = True
+    remove_repos = True
     max_trace_size = 10  # MB
     results_root = Path(__file__).parent.parent.parent / "1experiments_results"
     dataset_path = results_root / "dataset_bugs"
@@ -59,12 +68,13 @@ if __name__ == "__main__":
         logger.info(manager)
         try:
             repo = Repo.get_by_id(repo_and_commit)
-            if repo.status == "bad":
+            if repo.status == STATUS_BAD:
                 continue
         except Exception as e:
-            repo = Repo.create(id=repo_and_commit, status="bad", name=manager.repo_name, url=manager.url,
+            repo = Repo.create(id=repo_and_commit, status=STATUS_BAD, name=manager.repo_name, url=manager.url,
                                fixed_commit=manager.commit_hash, buggy_commit="")
-            logger.warning("Processing {n}", n=repo_and_commit)
+
+        logger.warning("Processing {n}", n=repo_and_commit)
 
         if manager.repo_name in halting_projects:
             continue
@@ -78,8 +88,8 @@ if __name__ == "__main__":
                 continue
             repo.buggy_commit = buggy_hash
 
-            fixed_project = Project(fixed_root)
-            buggy_project = Project(buggy_root)
+            fixed_project = Project(fixed_root, silence_output=silent)
+            buggy_project = Project(buggy_root, silence_output=silent)
             logger.info(f"Fixed commit path {fixed_project.path}")
             logger.info(f"Buggy commit path {buggy_project.path}")
 
@@ -108,7 +118,8 @@ if __name__ == "__main__":
             new_failing_node_ids = after - before
             logger.info("New node ids that failed, these have revealed a bug: {data}",
                         data=pformat(new_failing_node_ids))
-            repo.status = "no new failing modules"
+            repo.status = STATUS_NO_REVEALING_NODE_IDS
+            repo.save()
             if len(new_failing_node_ids) > 0:
                 with open(os.path.join(buggy_project.path, EXCEPTIONS_FILE)) as f:
                     exceptions = json.load(f)
@@ -117,13 +128,15 @@ if __name__ == "__main__":
                     logger.warning("Node id {node_id} failed with exception text: {exc}", node_id=node_id,
                                    exc=exc)
                 failing_on_assertion_node_ids = set(node_ids_where_assertion_error(exceptions))
-                repo.status = "no failed on assertion"
+                repo.status = STATUS_NO_FAILED_ON_ASSERTION
+                repo.save()
                 if len(failing_on_assertion_node_ids) > 0:
-                    repo.status = "no module cfg"
+                    repo.status = STATUS_NO_MODULE_CFG
+                    repo.save()
                     repo_stat.mark_repo_as_good(manager)
 
                     logger.warning("Found node ids which failed on assertion!")
-                    graphs_path = graphs_path_parent  # / buggy_project.project_name
+                    graphs_path = graphs_path_parent
                     module_under_test_path = manager.test_module_path
                     logger.info("Running the experiment for module {p}", p=module_under_test_path)
                     st = time()
@@ -141,6 +154,7 @@ if __name__ == "__main__":
                     not_failing_node_ids = covering_node_ids - failing_on_assertion_node_ids
                     not_failing_node_ids_as_params = " ".join(not_failing_node_ids)
                     return_code = buggy_project.run_command(f"pytest {not_failing_node_ids_as_params}")
+
                     if return_code == 0:
                         logger.warning("Test cases can be run individually")
                         cfg = ProjectCFG.create_from_path(buggy_project.path)
@@ -154,7 +168,7 @@ if __name__ == "__main__":
                             ducov = DefUsePairsCoverage(buggy_project.path, buggy_project.path,
                                                         max_trace_size=max_trace_size)
 
-                            repo.status = "good"
+                            repo.status = STATUS_GOOD
                             [module.delete() for module in repo.modules]
                             module = Module.create(
                                 path=module_under_test_path,
@@ -185,11 +199,16 @@ if __name__ == "__main__":
                     else:
                         logger.warning("Tests don't have constant ids: {p}", p=module_under_test_path)
                         repo_stat.mark_repo_as_bad(manager)
+                        repo.status = STATUS_DYNAMIC_NODE_IDS
+                        repo.save()
                 else:
                     repo_stat.mark_repo_as_bad(manager)
             else:
                 logger.warning("There are no new tests which failed in the merged version of code base")
                 repo_stat.mark_repo_as_bad(manager)
+            if remove_repos:
+                fixed_project.delete_from_disk()
+                buggy_project.delete_from_disk()
 
         except Exception as e:
             print(traceback.format_exc())

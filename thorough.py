@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
     exclude_folders = ["dataset", "venv", "tests", "test"]
     exit_code = run_tests(project_root, trace_root,
-                          exclude_folders_collection=[],
+                          exclude_folders_collection=["dataset"],
                           exclude_folders_tracing=exclude_folders,
                           quiet=args.silence_all,
                           node_ids=args.pytest_args
@@ -127,6 +127,7 @@ if __name__ == "__main__":
         merged_report: pd.DataFrame = pd.concat([streport, brreport, dureport], axis=1)
         merged_report = merged_report[pd.notnull(merged_report['StCov'])]
         print("Report:")
+        print(merged_report)
     else:
         pass
     exit(exit_code)

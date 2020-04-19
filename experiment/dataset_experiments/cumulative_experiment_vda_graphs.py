@@ -1,4 +1,3 @@
-import operator
 import os
 from pathlib import Path
 
@@ -7,11 +6,10 @@ import pandas as pd
 import seaborn as sns
 from typing import List
 
-from tqdm import tqdm
+from loguru import logger
 
 from coverage_metrics.coverage_metric_enum import CoverageMetric
 from experiment.core.columns import *
-import numpy as np
 from playhouse.sqlite_ext import SqliteExtDatabase
 
 from experiment.core.columns import DataFrameType
@@ -38,10 +36,10 @@ SHORT_NAME = {
 }
 
 
-# AVD_ST_BUG = "AVD (ST) Bugs"
-# AVD_BR_BUG = "AVD (BR) Bugs"
-# AVD_ST_MUT = "AVD (ST) Mut"
-# AVD_BR_MUT = "AVD (BR) Mut"
+# VDA_ST_BUG = "VDA (ST) Bugs"
+# VDA_BR_BUG = "VDA (BR) Bugs"
+# VDA_ST_MUT = "VDA (ST) Mut"
+# VDA_BR_MUT = "VDA (BR) Mut"
 
 
 def a12slow(lst1, lst2):
@@ -52,20 +50,22 @@ def a12slow(lst1, lst2):
                 same += 1
             elif x > y:
                 more += 1
+            else:
+                break
     return (more + 0.5 * same) / (len(lst1) * len(lst2))
 
 
-def avd_stat(metric_1, metric_2, cols, df):
+def vda_stat(metric_1, metric_2, cols, df):
     by_metric = df.groupby([METRIC])
     if metric_1.value in by_metric.groups.keys() \
             and metric_2.value in by_metric.groups.keys():
         gr1 = by_metric.get_group(metric_1.value)
         gr2 = by_metric.get_group(metric_2.value)
-        avds = []
+        vdas = []
         for col in cols:
-            avd = a12slow(gr1[col], gr2[col])
-            avds.append(avd)
-        return avds
+            vda = a12slow(gr1[col], gr2[col])
+            vdas.append(vda)
+        return vdas
     else:
         return [None] * len(cols)
 
@@ -77,15 +77,14 @@ def _join(dfs, type, mean=False):
     return dfs
 
 
-def _get_avd(df, group_by, cov_pairs):
+def _get_vda(df, group_by, cov_pairs):
     data = []
     for g_name, group in df.groupby([group_by], as_index=False):
         scores = [BUG_REVEALED_SCORE, MUTATION_SCORE]
         row = [g_name]
         for cov_pair in cov_pairs:
-            bug, mut = avd_stat(cov_pair[0], cov_pair[1], scores, group)
+            bug, mut = vda_stat(cov_pair[0], cov_pair[1], scores, group)
             row += [bug, mut]
-            # avd_br_bug, avd_br_mut = avd_stat(CoverageMetric.ALL_PAIRS, CoverageMetric.BRANCH, scores, group)
         data.append(row)
     columns = [group_by] + name_columns(cov_pairs)
     return pd.DataFrame(data=data, columns=columns)
@@ -95,8 +94,8 @@ def name_columns(cov_pairs):
     col_names = []
     for pair in cov_pairs:
         main, relative = map(SHORT_NAME.get, pair)
-        col_names.append(f"AVD {main}/{relative} Bugs")
-        col_names.append(f"AVD {main}/{relative} Muts")
+        col_names.append(f"VDA {main}/{relative} Bugs")
+        col_names.append(f"VDA {main}/{relative} Muts")
     return col_names
 
 
@@ -117,12 +116,18 @@ def _add_lines(axs, small, medium, large, lim_0_1):
             ax.set_ylim(0, 1)
 
 
-def _draw(x, data, old, order, ys):
+def _draw(x, data, old, order, ys, mean):
     hue_order = list(sorted(old[METRIC].unique()))
     fig, axs = plt.subplots(len(ys) + 1, sharex=True, figsize=(16, 8))
     for y, ax in zip(ys, axs):
         sns.pointplot(x=x, y=y, data=data, ax=ax, lw=3, order=order)
-    sns.countplot(x=x, hue=METRIC, data=old, palette="husl", ax=axs[-1], lw=3, order=order, hue_order=hue_order)
+    p = sns.countplot(x=x, hue=METRIC, data=old, palette="husl",
+                      ax=axs[-1], lw=3, order=order, hue_order=hue_order)
+    if mean:
+        y_label = "Count projects"
+    else:
+        y_label = "Count suites"
+    p.axes.yaxis.label.set_text(y_label)
     return fig, axs
 
 
@@ -134,30 +139,33 @@ def _generic_draw(root, repo_ids, df_type, mean,
     dfs = [read_combined_df(root, repo_id, df_type) for repo_id in repo_ids]
     df = _join(dfs, group_by, mean=mean)
 
-    avd_df = _get_avd(df, group_by, cov_pairs=cov_pairs)
+    vda_df = _get_vda(df, group_by, cov_pairs=cov_pairs)
     if df_type == DataFrameType.FIXED_SIZE:
         order = sorted(df[group_by].unique())
     else:
         order = list(sorted(df[group_by].unique(), key=cov_bin_key))
     ys = name_columns(cov_pairs)
-    fig, axs = _draw(group_by, avd_df, df, order, ys)
+    fig, axs = _draw(group_by, vda_df, df, order, ys, mean)
     _add_lines(axs[:-1], small, medium, large, lim_0_1)
 
     if not image_file:
         f = "fixed_size" if df_type == DataFrameType.FIXED_SIZE else "fixed_coverage"
         if mean:
             f += "_mean"
-        image_file = Path(img_folder) / f"{f}_avd.png"
-    plt.savefig(image_file)
+        image_file = Path(img_folder) / f"{f}_vda.png"
+    plt.savefig(image_file, dpi=300)
+    logger.info("Saved graph to {p}", p=image_file)
 
 
 if __name__ == "__main__":
-    lim = 1000
-    off = 0
-    # flag = "no_filter_aaa"
-    data_path = results_root / "graphs_cumulative_off_0_lim_1000all"
-    graphs_path = results_root / "graphs_cumulative_off_0_lim_1000all"
-    general_graphs = graphs_path / "graphs_avd"
+
+    use_fixed_version = False
+    flag = "main"
+    flag += "fixed" if use_fixed_version else "buggy"
+    dataset_path = results_root / f"dataset_cumulative_off_{flag}"
+    graphs_path = results_root / f"graphs_cumulative_off_{flag}"
+    general_graphs = graphs_path / "graphs_vda"
+
     # os.makedirs(graphs_path, exist_ok=True)
     # os.makedirs(general_graphs, exist_ok=True)
 
@@ -179,16 +187,14 @@ if __name__ == "__main__":
     ms: List[Module] = Module.select() \
         .join(Repo) \
         .group_by(Repo.name) \
-        .order_by(Module.total_cases.desc()) \
-        .offset(off) \
-        .limit(lim)
+        .order_by(Module.total_cases.desc())
     ms = list(ms)
     repos = []
 
     for m in ms:
         repo_id = m.repo.id
         repo_id = repo_id.replace("@", "_")
-        df = read_combined_df(data_path, repo_id, DataFrameType.FIXED_SIZE)
+        df = read_combined_df(graphs_path, repo_id, DataFrameType.FIXED_SIZE)
         if df is not None:
             metrics = df[METRIC].unique()
             if len(metrics) < 3:
@@ -270,7 +276,7 @@ if __name__ == "__main__":
                            None):  # more options can be specified also
 
         data = data.sort_values(MAX_SUITE_SIZE, ascending=False)
-        data, flag = filter(data, min_suite_size=8)
+        data, flag = filter(data, top=10)
         repos = data[REPO]
         dataset_stats_folder = general_graphs / f"dataset_stats_{flag}"
         os.makedirs(dataset_stats_folder, exist_ok=True)
@@ -285,7 +291,7 @@ if __name__ == "__main__":
         ]
         # mean
         _generic_draw(
-            root=data_path, repo_ids=repos,
+            root=graphs_path, repo_ids=repos,
             df_type=DataFrameType.FIXED_COVERAGE,
             cov_pairs=cov_pairs_du,
             mean=True,
@@ -293,7 +299,7 @@ if __name__ == "__main__":
             small=True
         )
         _generic_draw(
-            root=data_path, repo_ids=repos,
+            root=graphs_path, repo_ids=repos,
             df_type=DataFrameType.FIXED_SIZE,
             cov_pairs=cov_pairs_du,
             mean=True,
@@ -302,7 +308,7 @@ if __name__ == "__main__":
         )
         # no mean
         _generic_draw(
-            root=data_path, repo_ids=repos,
+            root=graphs_path, repo_ids=repos,
             df_type=DataFrameType.FIXED_SIZE,
             cov_pairs=cov_pairs_du,
             mean=False,
@@ -311,7 +317,7 @@ if __name__ == "__main__":
         )
 
         _generic_draw(
-            root=data_path, repo_ids=repos,
+            root=graphs_path, repo_ids=repos,
             df_type=DataFrameType.FIXED_COVERAGE,
             cov_pairs=cov_pairs_du,
             mean=False,
@@ -325,7 +331,7 @@ if __name__ == "__main__":
         br_rel_to_st_dir = dataset_stats_folder / "br"
         os.makedirs(br_rel_to_st_dir, exist_ok=True)
         _generic_draw(
-            root=data_path, repo_ids=repos,
+            root=graphs_path, repo_ids=repos,
             df_type=DataFrameType.FIXED_COVERAGE,
             cov_pairs=cov_pairs_br,
             mean=True,
@@ -333,7 +339,7 @@ if __name__ == "__main__":
             small=True
         )
         _generic_draw(
-            root=data_path, repo_ids=repos,
+            root=graphs_path, repo_ids=repos,
             df_type=DataFrameType.FIXED_SIZE,
             cov_pairs=cov_pairs_br,
             mean=True,
@@ -342,7 +348,7 @@ if __name__ == "__main__":
         )
         # no mean
         _generic_draw(
-            root=data_path, repo_ids=repos,
+            root=graphs_path, repo_ids=repos,
             df_type=DataFrameType.FIXED_COVERAGE,
             cov_pairs=cov_pairs_br,
             mean=False,
@@ -350,7 +356,7 @@ if __name__ == "__main__":
             small=True
         )
         _generic_draw(
-            root=data_path, repo_ids=repos,
+            root=graphs_path, repo_ids=repos,
             df_type=DataFrameType.FIXED_SIZE,
             cov_pairs=cov_pairs_br,
             mean=False,

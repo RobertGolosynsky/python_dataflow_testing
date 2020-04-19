@@ -109,6 +109,8 @@ def read_as_np_array(f, cut=-1, max_size_mb=None):
     # logger.debug("Reading trace {f}", f=f)
 
     df, file_size = read_as_dataframe(f, max_size_mb=max_size_mb)
+    if df is None:
+        return None, file_size
     np_array = df.values
     prev_len = len(np_array)
     new_len = prev_len

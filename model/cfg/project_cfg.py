@@ -9,6 +9,7 @@ import pathlib
 import hashlib
 import pickle
 import json
+import multiprocessing as mp
 
 
 class ProjectCFG:
@@ -72,11 +73,12 @@ class ProjectCFG:
     def _create_module_cfgs(self, module_paths):
         self.version_hash = self._calculate_project_hash(module_paths)
         module_cfgs = {}
-        for f in module_paths:
-            try:
-                module_cfg = ModuleCFG(f)
-                module_cfgs[f] = module_cfg
-            except NotImplementedError:
+        pool = mp.pool.Pool(processes=4)
+        cfgs = pool.map(ModuleCFG, module_paths)
+        for p, cfg in zip(module_paths, cfgs):
+            if cfg:
+                module_cfgs[p] = cfg
+            else:
                 logger.info("Could not create module cfg for {f}", f=f)
         return module_cfgs
 

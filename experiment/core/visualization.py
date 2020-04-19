@@ -16,7 +16,7 @@ def create_box_plot(df, title, filename,
     plt.ylabel(ylabel)
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-    plt.savefig(filename)
+    plt.savefig(filename, dpi=300)
     plt.close()
 
 
@@ -31,7 +31,7 @@ def create_cat_plot(df, title, filename,
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
 
-    plt.savefig(filename)
+    plt.savefig(filename, dpi=300)
     plt.close()
 
 
@@ -55,6 +55,6 @@ def create_cat_plot_with_count(df, title, filename,
                       order=order, ax=ax2)
     plt.title(title)
 
-    fig.savefig(filename)
+    fig.savefig(filename, dpi=300)
     plt.close(fig)
 

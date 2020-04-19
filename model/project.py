@@ -32,8 +32,9 @@ class Project(object):
     exclude_folders = ["venv", "__pycache__"]
     thorough_requirements = [r.strip() for r in open(through_requirements_path).readlines()]
 
-    def __init__(self, project_path):
+    def __init__(self, project_path, silence_output=False):
         self.venv_activated = False
+        self.silence_output = silence_output
         self.path = str(pathlib.Path(project_path).resolve())
         self.project_name = os.path.basename(self.path)
         self.tests = []
@@ -87,8 +88,8 @@ class Project(object):
             extra_requirements = []
 
         kw = {
-            "stdout": subprocess.PIPE if capture_output else sys.stdout,
-            "stderr": subprocess.PIPE if capture_output else sys.stdout,
+            "stdout": subprocess.PIPE if capture_output or self.silence_output else sys.stdout,
+            "stderr": subprocess.PIPE if capture_output or self.silence_output else sys.stdout,
             "shell": True,
             "cwd": self.path
         }
@@ -99,16 +100,16 @@ class Project(object):
         if timeout:
             cmd = f"timeout {timeout} " + cmd
         cmds = [activate_venv]
-        if activate_only:
-            cmds.append(cmd)
-        else:
-            for package in packages:
-                if package not in self.installed_packages:
-                    logger.debug("Package {p} is queued do be installed {path}", p=package, path=self.path)
-                    cmds.append(f"pip3 install {package}")
-                    self.installed_packages.add(package)
-                else:
-                    logger.debug("Package {p} is already installed for project {path}", p=package, path=self.path)
+        if not activate_only:
+            packages_set = set(packages)
+            to_install = packages_set - self.installed_packages
+            already_installed = packages_set - to_install
+            if already_installed:
+                logger.debug("Packages {p} are already installed {path}", p=already_installed, path=self.path)
+            logger.debug("Packages {p} are queued do be installed {path}", p=to_install, path=self.path)
+            for package in to_install:
+                cmds.append(f"pip3 install {package}")
+                self.installed_packages.add(package)
         cmds.append(cmd)
 
         extended_cmd = self.commands_sep.join(cmds)

@@ -163,6 +163,7 @@ def generate_suite_of_fixed_size(node_ids_coverage_items: dict, exact_size):
 
 
 def generate_suite_of_fixed_coverage(node_ids_coverage_items: dict, total_items, boundary, failure_allowed=20):
+    l, r = boundary
     node_ids = list(node_ids_coverage_items.keys())
 
     initial_node = random.choice(node_ids)
@@ -170,8 +171,11 @@ def generate_suite_of_fixed_coverage(node_ids_coverage_items: dict, total_items,
 
     covered_items = set()
     covered_items.update(node_ids_coverage_items[initial_node])
+    coverage = len(covered_items) / total_items
 
-    l, r = boundary
+    if l <= coverage < r:
+        return suite
+
     failure_count = 0
     while True:
         node_id = pick_next_node(node_ids_coverage_items, suite, covered_items)
@@ -182,6 +186,7 @@ def generate_suite_of_fixed_coverage(node_ids_coverage_items: dict, total_items,
         _covered_items = covered_items | node_coverage
 
         coverage = len(_covered_items) / total_items
+
         if coverage > r:
             failure_count += 1
             if failure_count > failure_allowed:

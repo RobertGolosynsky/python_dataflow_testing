@@ -98,9 +98,11 @@ def generic_experiment_coverage(
     if coverage_metrics is None:
         coverage_metrics = DEFAULT_METRICS
 
-    coverage_boundaries = zip(
-        np.linspace(0.0, 0.95, num=coverage_boundaries_count),
-        np.linspace(0.05, 1.0, num=coverage_boundaries_count)
+    coverage_boundaries = list(
+        zip(
+            np.linspace(0.0, 0.95, num=coverage_boundaries_count),
+            np.linspace(0.05, 1.0, num=coverage_boundaries_count)
+        )
     )
 
     generator = SuiteGenerator(project_root, project_root, COMMON_EXCLUDE, max_trace_size=max_trace_size)
